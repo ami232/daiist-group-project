@@ -13,3 +13,6 @@ requirements.txt
 
 # Never commit your API keys
 .env
+
+# Past logs downloaded from your Hugging Face dataset when the app starts
+logs_archive/

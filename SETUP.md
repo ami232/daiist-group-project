@@ -35,15 +35,16 @@ Each member can use their own free keys. Free tiers have daily limits (for examp
 ## Your Space
 
 1. One member creates a Hugging Face account and a new Space: <https://huggingface.co/new-space>, SDK **Gradio**, hardware **CPU basic** (free), visibility **public**. Add the others as members of the Space or of an organisation.
-2. In the Space's *Settings → Variables and secrets*, add each key from `.env.example` as a **secret**.
-3. In your `.env`, set `HF_SPACE=<user>/<space-name>`, then:
+2. In your `.env`, set `HF_TOKEN` and `HF_SPACE=<user>/<space-name>`, then:
 
    ```bash
-   uv run python deploy.py
+   uv run python deploy.py --secrets
    ```
 
+   `--secrets` copies every variable in `.env.example` that is set in your environment into the Space's secrets (you can also add them by hand in the Space's *Settings → Variables and secrets*). Next time, `uv run python deploy.py` alone is enough unless a key changed.
+
    This uploads the app, writes the `requirements.txt` that Spaces needs from your `uv.lock`, and adds the Space's configuration. Do not edit the Space's files by hand: the repo is the source of truth.
-4. Open the Space and check the build log (*Logs*) if it does not start.
+3. Open the Space and check the build log (*Logs*) if it does not start.
 
 A Space on free hardware **goes to sleep when nobody uses it** and takes a minute or more to wake up. Open it before your presentation.
 
@@ -67,7 +68,7 @@ Do not change the log fields the template defines. `check.py` and the grader rel
 ## Check your submission
 
 ```bash
-uv run python check.py                    # local: keys, app starts, one request end to end, log schema, evaluation files
+uv run python check.py                    # local: keys, evaluation files, one request end to end, log schema, drift demo
 uv run python check.py --space <url>      # also wakes your Space and sends it one request
 ```
 

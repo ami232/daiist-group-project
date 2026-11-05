@@ -14,9 +14,9 @@ Start with [SETUP.md](SETUP.md).
 
 1. **Business process and decision.** Who uses the product, which decision or task it supports, what happens today without it (your **baseline**), how you measure success, and roughly what it is worth in euros. Write this before you choose any model.
 2. **Two connected AI components** from different modules:
-   - tabular ML (A1);
-   - LLMs, RAG or agents (module 2, A3);
-   - vision (module 3, A2).
+   - tabular ML
+   - vision
+   - agentic LLM
 
    One component's output must be the next one's input, in one flow. Two demos in two tabs do not count. Pretrained models and APIs are fine, and you do not have to train anything from scratch. You may reuse your own A1–A3 code; say whose and where in REPORT.md.
 
@@ -62,13 +62,25 @@ A bandit that is wired in but never learns from real feedback earns nothing.
 
 ```bash
 uv run python app.py                 # the app, at http://127.0.0.1:7860
+uv run python main.py reference      # features of your reference inputs, for the drift check
 uv run python main.py evaluate       # component and end-to-end evaluation
-uv run python main.py drift-demo     # replays shifted inputs; the alert must fire
+uv run python main.py drift-demo     # normal and shifted inputs; the alert must fire only on the shifted ones
 uv run python deploy.py              # uploads the app to your Space
 uv run python check.py               # what the grader runs
 ```
 
-Put your components wherever suits you, but `app.py` only wires them together: the logic lives in modules that `main.py evaluate` can also import. Evaluation may be a notebook if `main.py evaluate` runs it.
+The template runs end to end from the start, with placeholder components, so you can deploy it on day one and replace the pieces one by one:
+
+| File | What it is | Yours to change? |
+|---|---|---|
+| `pipeline.py` | The two components and how one feeds the other. `run()` is the contract the rest relies on. | Yes: replace the placeholders, keep `run()`'s return value |
+| `app.py` | The App and Monitoring tabs | Yes, the interface; keep `serve()` and the `/run` endpoint |
+| `evaluate.py` | Runs `eval/cases.csv` through the pipeline; the metrics are TODOs | Yes (or `evaluate.ipynb`) |
+| `monitor.py` | Quality signals, drift (PSI), alert rules | Yes: the signals, features and thresholds |
+| `logbook.py` | Logs requests and 👍/👎, locally and to your HF dataset | Add fields, don't remove any |
+| `env.py`, `main.py`, `deploy.py`, `check.py` | Plumbing | No |
+
+The input files for the evaluation and the drift check are described in [eval/README.md](eval/README.md).
 
 **Your app must run on someone else's machine with someone else's keys.** That is how it is graded. Use only the APIs listed in SETUP.md (ask first if you need another one), read every key from the environment, list them in `.env.example`, and commit whatever models, indexes or reference sets the app needs (under 90 MB in total), or download them in a step that SETUP.md describes.
 
@@ -83,20 +95,20 @@ Deadlines are on Blackboard.
 5. **Presentation** in class. Your slot is published after the final submission.
 6. **Peer assessment:** a form, filled in by each student.
 
-M1 and M2 do not carry marks, but **a team that misses either one meets the professor** before going on. In the integration workshop, bring your live Space.
+M1 and M2 do not carry marks, but they are there for detecting problems early. In the integration workshop, bring your live Space.
 
 **Final submission.** One member forks this repo and adds the rest of the team as collaborators. Tag the final commit `final` (`git tag final && git push --tags`), open a PR to https://github.com/ami232/daiist-group-project, and submit on Blackboard, once per team: the PR link, the Space URL, and a zip of the repo as backup. After the deadline you may only fix things that keep the Space running; anything else is ignored.
 
 ## Presentation
 
-- **BBA:** 6 minutes, then 4 minutes of questions. **PPLE:** 12 minutes, then 8 of questions.
-- Show the **live product on the Space**, not screenshots: one normal case, one case it gets wrong or sends to review, and the Monitoring tab. A recorded backup video is allowed if the network fails.
-- **The professor picks who answers each question**, so every member must be able to explain every part.
+-  6 minutes, then 4 minutes of questions
+- Show the **live product on the Space**, not screenshots: one normal case, one case it gets wrong or sends to review, and the Monitoring tab. Have a recorded backup video is allowed if the network fails.
+- Every team member must be able to explain every part.
 - The other students fill in a short form after each presentation, as potential users or buyers: did they understand the problem, does it work, would they trust it, would they buy it. You get their anonymised comments afterwards.
 
 ## Grading
 
-**Hard requirement:** the professor can run the app from your `final` commit, with their own API keys, by following SETUP.md, and `check.py` passes. If your Space happens to be down when it is graded, that is not penalised as long as this holds.
+**Requirement:** anyone can run the app from your `final` commit, with their own API keys, by following SETUP.md, and `check.py` passes. If your Space happens to be down when it is graded, that is not penalised as long as this holds.
 
 | Component | Weight |
 |---|---|
@@ -109,8 +121,8 @@ M1 and M2 do not carry marks, but **a team that misses either one meets the prof
 
 The team grade cannot go above 100%.
 
-**Your individual grade** is the team grade multiplied by a factor from the peer assessment. Each of you splits 100 points among all the members of your team, yourself included, according to how much each person contributed, and writes a sentence or two about each one. Your factor comes from the points your **teammates** give you; your own points do not count towards it. If the team splits evenly, everyone's factor is 1. Otherwise it ranges from 0.8 to 1.1, and your grade still cannot go above 100%. A factor below 1 needs at least two teammates to agree, and it is always checked against CONTRIBUTIONS.md, the commits and the Q&A.
+**Your individual grade** is the team grade adjusted by presentation feedback, team assessment, and individual contributions to the repo.
 
 ## AI use
 
-Allowed for code; disclose it in REPORT.md. The decisions (the problem, the components and how they connect, the metrics, the drift threshold, the review rule, go/no-go), the test cases, your own labels and the report's analysis must be the team's.
+Allowed for code; disclose it in REPORT.md. The decisions (the problem, the components and how they connect, the metrics, the drift threshold, the review rule, etc.), the test cases, your own labels and the report's analysis must be the team's.
