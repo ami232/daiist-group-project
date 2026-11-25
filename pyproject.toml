@@ -4,10 +4,13 @@ version = "0.1.0"
 description = "DAIIST group assignment: an AI product with two connected components, deployed, logged and monitored"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "google-genai>=3.6.1",
     "gradio>=5.0",
     "numpy>=2.0",
     "pandas>=2.2",
     "psycopg[binary]>=3.2",
+    "pydantic>=2.14.3",
+    "scikit-learn>=1.9.1",
 ]
 
 # Only for running evaluate.ipynb locally; not installed on Render.

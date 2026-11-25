@@ -3,7 +3,7 @@
 # Render also creates the logs database declared at the end of this file.
 services:
   - type: web
-    name: daiist-group-project
+    name: maintai
     runtime: python          # Python version from .python-version, packages from uv.lock
     plan: free
     region: frankfurt
@@ -18,15 +18,19 @@ services:
         sync: false
       - key: ROBOFLOW_API_KEY
         sync: false
+      - key: LLM_CACHE          # MaintAI: live traffic never comes from the LLM cache
+        value: "off"
+      - key: DAILY_LLM_BUDGET   # MaintAI: Gemini calls a day before degraded mode (free tier: 500)
+        value: "400"
       - key: DATABASE_URL       # the logs database below; logbook.py writes to it
         fromDatabase:
-          name: daiist-group-project-logs
+          name: maintai-logs
           property: connectionString
 
 # The logs database: free Postgres, 1 GB. Render deletes free databases 30 days after
 # they are created (plus 14 days of grace), so export the logs before then (SETUP.md, "Logs").
 databases:
-  - name: daiist-group-project-logs
+  - name: maintai-logs
     plan: free
     region: frankfurt         # the same region as the app
     databaseName: logs
