@@ -7,6 +7,7 @@ calls `serve()` locally and `/run` on your deployed app, with one input from
 eval/cases.csv (text, or a file path).
 """
 
+import json
 import os
 import time
 
@@ -16,19 +17,37 @@ import env
 import logbook
 import monitor
 import pipeline
+from maintai import agent, bandit, component_a
+from maintai.inputs import EXAMPLE_INPUT
 
 env.load_env()
 LOG_TARGET = logbook.start()
 
-TITLE = "Your product's name"  # TODO
-DESCRIPTION = "One sentence: who it is for and what it does."  # TODO
+TITLE = "MaintAI – Intelligent Maintenance Advisor"
+DESCRIPTION = "For maintenance managers: predicts the failure risk of a machine process and drafts a work order to approve. Plant data and systems are simulated."
 
 
 def serve(raw_input: str) -> dict:
     """Run one request through the pipeline, log it, and return the logged record."""
     started = time.perf_counter()
-    result = pipeline.run(raw_input)
-    return logbook.log_request(result | {"latency_s": round(time.perf_counter() - started, 3)})
+    arm, arm_probs = bandit.choose_arm()  # WP6: pass logbook.load() once the bandit learns
+    result = pipeline.run(raw_input, arm=arm)
+    extra = {"source": os.environ.get("MAINTAI_SOURCE", "real"), "arm_probs": arm_probs}
+    return logbook.log_request(result | extra | {"latency_s": round(time.perf_counter() - started, 3)})
+
+
+def _work_order_text(record: dict) -> str:
+    """Plain-text view of the work order (WP7 replaces it with the designed card)."""
+    b = record["outputs"]["component_b"]
+    if record.get("status") == "out_of_scope":
+        return f"Cannot help with this input ({b['reason']}). {b.get('detail', '')}"
+    order = b["work_order"]
+    draft = order["draft"]
+    lines = [f"{draft['priority']} · {draft['action']} · mode {draft['failure_mode_addressed']}", draft["justification"]]
+    lines += [f"- {step}" for step in draft["steps"]]
+    if order.get("cost"):
+        lines.append(f"Preventive €{order['cost']['preventive_eur']:.0f} vs breakdown €{order['cost']['breakdown_eur']:.0f}")
+    return "\n".join(lines)
 
 
 # --- App tab -----------------------------------------------------------------
@@ -37,11 +56,17 @@ def on_run(raw_input):
     if raw_input is None or not str(raw_input).strip():
         raise gr.Error("Give me an input first.")
     record = serve(raw_input)
-    outputs = record["outputs"]
-    status = "⚠️ **Sent to a person for review.**" if record["review"] else "✅ Handled automatically."
+    if record.get("status") == "out_of_scope":
+        status = "⛔ **Out of scope:** no model was called."
+    elif record["review"]:
+        status = "⚠️ **Sent to a person for review.**"
+    else:
+        status = "✅ Handled automatically."
+    if record.get("degraded"):
+        status += f"  _Degraded mode: {record.get('degraded_reason', '')}._"
     return (
-        outputs["component_a"],
-        outputs["component_b"]["reply"],
+        record["outputs"]["component_a"],
+        _work_order_text(record),
         f"{status}  Latency {record['latency_s']} s, cost €{record['cost_eur']:.4f}.",
         record["id"],
     )
@@ -78,15 +103,18 @@ with gr.Blocks(title=TITLE) as demo:
     gr.Markdown(f"# {TITLE}\n{DESCRIPTION}")
     if missing := env.missing():
         gr.Markdown(f"⚠️ **Missing environment variables:** {', '.join(missing)}. See SETUP.md.")
+    if stubs := [v for v in (component_a.MODEL_VERSION, agent.PROMPT_VERSION, bandit.POLICY_VERSION) if v.startswith("stub")]:
+        gr.Markdown(f"🚧 **Development version.** These parts are provisional stubs, so their outputs are "
+                    f"placeholders, not real predictions: {', '.join(stubs)}.")
 
     with gr.Tab("App"):
         request_id = gr.State("")
-        # TODO: your input. For images: gr.Image(type="filepath"); for files: gr.File(type="filepath").
-        raw_input = gr.Textbox(label="Customer message", lines=4)
-        run_button = gr.Button("Run", variant="primary")
+        # WP7: replace with a form that builds this JSON; keep one text input for the /run endpoint.
+        raw_input = gr.Textbox(label="Machine reading (JSON)", lines=4, value=json.dumps(EXAMPLE_INPUT))
+        run_button = gr.Button("Analyse machine", variant="primary")
         with gr.Row():
-            out_a = gr.JSON(label="Component A")
-            out_b = gr.Textbox(label="Component B", lines=4)
+            out_a = gr.JSON(label="Component A · failure risk")
+            out_b = gr.Textbox(label="Component B · work order", lines=8)
         status = gr.Markdown()
         with gr.Row():
             up = gr.Button("👍")

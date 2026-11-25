@@ -1,11 +1,9 @@
 """
-Your product's logic: the two components and how one feeds the other.
+MaintAI's flow: component A (tabular ML) feeds component B (agentic LLM).  OWNER: WP3.
 
-Everything here is a PLACEHOLDER so the template runs end to end without any
-key: component A is a keyword "classifier" and component B a canned "writer".
-Replace both with your real components (or import them from your own modules)
-but keep what `run()` returns, because app.py, evaluate.py, main.py and
-check.py all read it:
+The modules live in maintai/. This file only chains them and builds the record
+that app.py logs. It keeps the template's contract, which app.py, evaluate.py,
+main.py and check.py read:
 
     run(raw_input) -> {
         "input_summary": str,          # short, no personal data: it is logged
@@ -14,78 +12,72 @@ check.py all read it:
         "versions": {component: str},  # model and prompt versions
         "review": bool,                # does this case go to a person?
         "tokens": int,                 # tokens spent on this request (0 if none)
-        "cost_eur": float,             # cost of this request in euros
+        "cost_eur": float,             # production-equivalent cost of this request in euros
     }
 
-`raw_input` is what the App tab's input gives you: text, or a file path if you
-switch the input to gr.Image / gr.File with type="filepath". The `input` column
-of eval/cases.csv uses the same convention.
+Extra fields (arm, degraded, llm usage...) are added after these and are logged too.
+
+`arm` (decision D1): app.serve() passes the arm chosen by the bandit. When it is
+None (evaluate.py, main.py, check.py), a deterministic arm is used so the LLM
+cache gives the same answer every time.
 """
 
-from pathlib import Path
-
-VERSIONS = {
-    "component_a": "placeholder-keywords-v0",
-    "component_b": "placeholder-template-v0",
-}
-
-# Placeholder thresholds. Yours must be justified in REPORT.md.
-REVIEW_BELOW_CONFIDENCE = 0.6
-
-_NEGATIVE = {"broken", "late", "missing", "wrong", "refund", "bad", "problem", "error"}
-_POSITIVE = {"thanks", "great", "perfect", "fine", "good", "works"}
+from maintai import agent, bandit, component_a, economics, features, guardrails, inputs
+from maintai.schemas import OutOfScope
 
 
-def read_input(raw_input: str) -> str:
-    """Text as it is; for a file path, the file's text. Replace for images."""
-    path = Path(str(raw_input))
-    if len(str(raw_input)) < 300 and path.is_file():
-        return path.read_text(encoding="utf-8", errors="replace")
-    return str(raw_input)
+def run(raw_input: str, arm: str | None = None) -> dict:
+    parsed = inputs.parse(raw_input)
+    if isinstance(parsed, OutOfScope):
+        return _out_of_scope(parsed)
 
+    machine = parsed
+    risk = component_a.assess(machine)
+    arm = arm or bandit.offline_arm(raw_input)
+    result = agent.plan(machine, risk, arm)
+    order = guardrails.finalise(machine, risk, result)
+    usage = result.usage
 
-def input_features(text: str) -> dict[str, float]:
-    """Numbers that describe the input, for the drift check (lengths, brightness, language...)."""
-    words = text.split()
-    letters = [c for c in text if c.isalpha()]
     return {
-        "n_words": float(len(words)),
-        "share_uppercase": sum(c.isupper() for c in letters) / len(letters) if letters else 0.0,
+        "input_summary": inputs.summary(machine),
+        "features": features.drift_features(machine, risk),
+        "outputs": {
+            "component_a": risk.model_dump(mode="json"),
+            "component_b": {
+                "work_order": order.model_dump(mode="json"),
+                "tool_calls": [c.model_dump(mode="json") for c in result.tool_calls],
+            },
+        },
+        "versions": {
+            "component_a": risk.model_version,
+            "component_b": f"{usage.model or 'none'}|{result.prompt_version}",
+            "strategy": arm,
+            "bandit": bandit.POLICY_VERSION,
+        },
+        "review": order.review,
+        "tokens": usage.tokens,
+        "cost_eur": economics.llm_cost_eur(usage.model, usage.tokens_in, usage.tokens_out + usage.tokens_thinking),
+        # --- extra fields (logged as well) ---
+        "status": "ok",
+        "arm": arm,
+        "risk_band": risk.risk_band.value,
+        "degraded": result.degraded,
+        "degraded_reason": result.degraded_reason,
+        "llm": usage.model_dump(),
     }
 
 
-def component_a(text: str) -> dict:
-    """PLACEHOLDER first component: label the input and say how sure it is."""
-    words = {w.strip(".,!?;:").lower() for w in text.split()}
-    negative, positive = len(words & _NEGATIVE), len(words & _POSITIVE)
-    if negative == positive:
-        return {"label": "unclear", "confidence": 0.5}
-    label = "complaint" if negative > positive else "no_issue"
-    confidence = 0.5 + 0.5 * abs(negative - positive) / (negative + positive)
-    return {"label": label, "confidence": round(confidence, 3)}
-
-
-def component_b(text: str, a: dict) -> dict:
-    """PLACEHOLDER second component: uses component A's output to write a reply."""
-    replies = {
-        "complaint": "We are sorry about the problem. We will contact you within 48 hours.",
-        "no_issue": "Thank you for your message. No action is needed.",
-        "unclear": "Thank you. A member of the team will review your message.",
-    }
-    return {"reply": replies[a["label"]], "tokens": 0}
-
-
-def run(raw_input: str) -> dict:
-    text = read_input(raw_input)
-    a = component_a(text)
-    b = component_b(text, a)
-    features = input_features(text) | {"confidence": a["confidence"]}
+def _out_of_scope(parsed: OutOfScope) -> dict:
+    """Refused before any model call (go/no-go criterion 6). No work order is produced."""
+    refusal = {"status": "out_of_scope", "reason": parsed.reason, "detail": parsed.detail}
     return {
-        "input_summary": text[:120],
-        "features": features,
-        "outputs": {"component_a": a, "component_b": b},
-        "versions": VERSIONS,
-        "review": a["confidence"] < REVIEW_BELOW_CONFIDENCE,
-        "tokens": b["tokens"],
+        "input_summary": f"out of scope: {parsed.reason}",
+        "features": {},
+        "outputs": {"component_a": refusal, "component_b": refusal},
+        "versions": {"component_a": component_a.MODEL_VERSION, "component_b": agent.PROMPT_VERSION},
+        "review": False,
+        "tokens": 0,
         "cost_eur": 0.0,
+        "status": "out_of_scope",
+        "degraded": False,
     }
