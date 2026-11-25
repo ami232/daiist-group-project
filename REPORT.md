@@ -3,7 +3,7 @@
 - **Product**: MaintAI – Intelligent Maintenance Advisor
 - **Team** (Blackboard group name):
 - **Section**: [BBADBA 5A | BBADBA 5B | PPLEDBA 5A]
-- **App URL** (on Render):
+- **App URL** (on Render): https://maintai-238a.onrender.com
 - **Final commit** (tag `final`):
 
 *At most about 3,000 words, tables excluded. Members and who did what go in CONTRIBUTIONS.md.*
@@ -175,6 +175,10 @@ The seven criteria:
 ## Operations
 
 *What you log. The quality signal and the drift check you monitor, the reference set, and the alert threshold with its justification. The drift demo: what you shifted, and the result with the alert firing (screenshot or numbers). The rate of false alarms on normal inputs.*
+
+**Deployment (25 Nov 2026).** The app runs on Render's free plan at https://maintai-238a.onrender.com, created from `render.yaml` as a Blueprint: one web service and one free PostgreSQL database for the logs, connected through `DATABASE_URL`. `GEMINI_API_KEY` is stored only in the service's environment variables. On Render, `LLM_CACHE=off`, so live requests never come from the LLM cache, and `DAILY_LLM_BUDGET=400` keeps a margin below the free tier's 500 requests a day.
+
+**Records excluded from analysis.** The first deployment still used stub components. The 2 requests and 2 👍 logged on 25 Nov 2026 were smoke tests of the deployment. They are not evidence for the evaluation or for the bandit's learning. They can be identified by their versions, which start with `stub-` (for example `component_a = stub-a-v0`), and every analysis and the bandit exclude records with stub versions.
 
 ## Failures
 
