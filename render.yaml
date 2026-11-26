@@ -3,7 +3,7 @@
 # Render also creates the logs database declared at the end of this file.
 services:
   - type: web
-    name: daiist-group-project
+    name: aisle-run-daiist
     runtime: python          # Python version from .python-version, packages from uv.lock
     plan: free
     region: frankfurt
@@ -11,13 +11,12 @@ services:
     startCommand: uv run --no-sync python app.py
     healthCheckPath: /
     autoDeployTrigger: commit   # every push to main redeploys
-    # Render asks for these values when you create the service; leave empty the ones you don't use.
-    # A key you add later goes in the service's Environment page on Render, not here.
+    # Provide the Gemini key in the Dashboard. Render generates the staff code.
     envVars:
       - key: GEMINI_API_KEY
         sync: false
-      - key: ROBOFLOW_API_KEY
-        sync: false
+      - key: AISLE_RUN_STAFF_CODE
+        generateValue: true
       - key: DATABASE_URL       # the logs database below; logbook.py writes to it
         fromDatabase:
           name: daiist-group-project-logs

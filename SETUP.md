@@ -10,7 +10,7 @@ Then:
 uv run python app.py
 ```
 
-You should see the template's placeholder app at <http://127.0.0.1:7860>, with its App and Monitoring tabs.
+Aisle Run opens with **App** and **Monitoring** tabs. Set `GEMINI_API_KEY` in `.env`, then upload a grocery-list photo without personal details. The demo catalog and floor plan are bundled in `store.json`.
 
 ## API keys
 
@@ -39,7 +39,7 @@ The app runs as a free web service on [Render](https://render.com). Render build
 1. Before the first deploy, change `name` in `render.yaml` to your product's name (lowercase, with hyphens) and push. Your app's address will be `https://<name>.onrender.com`. If someone already has that name, Render adds a few characters to it.
 2. The member who owns the fork creates a free Render account: <https://dashboard.render.com/register>, with **GitHub**. No credit card is needed.
 3. In Render, click **New → Blueprint**, then **Connect GitHub**. GitHub asks which repositories Render may see: choose **Only select repositories** and pick your fork. Back in Render, select the fork. Do not paste the fork's address as a public repository instead: Render would deploy it once, but not again when you push.
-4. Give the Blueprint any name, paste the keys your app uses in the values Render asks for (leave the others empty), and click **Deploy Blueprint**.
+4. Give the Blueprint a name, enter `GEMINI_API_KEY` when prompted, and click **Deploy Blueprint**. Render generates a separate staff access code, available in the service's **Environment** page.
 5. The first build takes a few minutes. Your app's address is at the top of the service's page. If the build or the app fails, the service's **Logs** page says why.
 
 Only the member who created the service sees it on Render. The others don't need to: pushing to `main` is enough to put a new version online. On the free plan, a new version can take up to 15 minutes to go online. If it hasn't after 20 minutes, open the service on Render, cancel the deploy and click **Manual Deploy → Deploy latest commit**. Don't push a fix just before your presentation.
@@ -75,6 +75,13 @@ To see the online logs on your laptop (for your analysis, or before the database
 **Render deletes free databases 30 days after they are created.** A database created now lasts beyond the presentations, but export the logs after the presentation if you want to keep them. A Render account can have only one free database at a time.
 
 Do not change the log fields the template defines. `check.py` and the grading rely on them. You may add your own.
+
+## Store staff access
+
+Shoppers can browse aisles and upload lists as guests. To enable staff sign-in, set
+`AISLE_RUN_STAFF_CODE` in your local `.env` or the Render service environment.
+Share the code privately with store staff. Staff updates are stored in SQLite under
+`logs/` locally and in the app's Postgres database on Render.
 
 ## Dependencies
 

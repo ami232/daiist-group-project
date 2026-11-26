@@ -1,0 +1,635 @@
+{
+  "catalog": [
+    {
+      "id": "tomatoes",
+      "name": "Tomatoes",
+      "zone": "produce",
+      "count": 14,
+      "aliases": [
+        "tomato",
+        "cherry tomatoes"
+      ]
+    },
+    {
+      "id": "basil",
+      "name": "Fresh basil",
+      "zone": "produce",
+      "count": 2,
+      "aliases": [
+        "basil"
+      ],
+      "alternative": "dried basil"
+    },
+    {
+      "id": "avocado",
+      "name": "Avocados",
+      "zone": "produce",
+      "count": 9,
+      "aliases": [
+        "avocado"
+      ]
+    },
+    {
+      "id": "lemon",
+      "name": "Lemons",
+      "zone": "produce",
+      "count": 18,
+      "aliases": [
+        "lemon"
+      ]
+    },
+    {
+      "id": "bread",
+      "name": "Sourdough bread",
+      "zone": "bakery",
+      "count": 7,
+      "aliases": [
+        "bread",
+        "sourdough"
+      ]
+    },
+    {
+      "id": "croissant",
+      "name": "Croissants",
+      "zone": "bakery",
+      "count": 5,
+      "aliases": [
+        "croissant"
+      ]
+    },
+    {
+      "id": "water",
+      "name": "Sparkling water",
+      "zone": "drinks",
+      "count": 17,
+      "aliases": [
+        "water",
+        "soda water"
+      ]
+    },
+    {
+      "id": "juice",
+      "name": "Orange juice",
+      "zone": "drinks",
+      "count": 12,
+      "aliases": [
+        "juice",
+        "oj"
+      ]
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta",
+      "zone": "pantry",
+      "count": 16,
+      "aliases": [
+        "penne",
+        "spaghetti"
+      ]
+    },
+    {
+      "id": "dried basil",
+      "name": "Dried basil",
+      "zone": "pantry",
+      "count": 12,
+      "aliases": []
+    },
+    {
+      "id": "olive oil",
+      "name": "Olive oil",
+      "zone": "pantry",
+      "count": 9,
+      "aliases": [
+        "oil",
+        "evoo"
+      ]
+    },
+    {
+      "id": "rice",
+      "name": "Rice",
+      "zone": "pantry",
+      "count": 13,
+      "aliases": []
+    },
+    {
+      "id": "cereal",
+      "name": "Cereal",
+      "zone": "pantry",
+      "count": 13,
+      "aliases": [
+        "breakfast cereal",
+        "cornflakes"
+      ]
+    },
+    {
+      "id": "chocolate",
+      "name": "Dark chocolate",
+      "zone": "snacks",
+      "count": 8,
+      "aliases": [
+        "chocolate"
+      ]
+    },
+    {
+      "id": "almonds",
+      "name": "Almonds",
+      "zone": "snacks",
+      "count": 11,
+      "aliases": [
+        "nuts"
+      ]
+    },
+    {
+      "id": "mozzarella",
+      "name": "Mozzarella",
+      "zone": "chilled",
+      "count": 8,
+      "aliases": [
+        "mozz",
+        "mozzarella cheese"
+      ]
+    },
+    {
+      "id": "oat milk",
+      "name": "Oat milk",
+      "zone": "chilled",
+      "count": 6,
+      "aliases": [
+        "oatmilk"
+      ]
+    },
+    {
+      "id": "yogurt",
+      "name": "Greek yogurt",
+      "zone": "chilled",
+      "count": 10,
+      "aliases": [
+        "yogurt",
+        "yoghurt"
+      ]
+    },
+    {
+      "id": "eggs",
+      "name": "Eggs",
+      "zone": "chilled",
+      "count": 15,
+      "aliases": [
+        "egg"
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "junction-0-0",
+      "label": "Crossing 1.1",
+      "x": 160,
+      "y": 95
+    },
+    {
+      "id": "junction-0-1",
+      "label": "Crossing 1.2",
+      "x": 330,
+      "y": 95
+    },
+    {
+      "id": "junction-0-2",
+      "label": "Crossing 1.3",
+      "x": 500,
+      "y": 95
+    },
+    {
+      "id": "junction-0-3",
+      "label": "Crossing 1.4",
+      "x": 649,
+      "y": 95
+    },
+    {
+      "id": "produce",
+      "label": "Aisle 1 · Left",
+      "x": 160,
+      "y": 165
+    },
+    {
+      "id": "pantry",
+      "label": "Aisle 2 · Left",
+      "x": 330,
+      "y": 165
+    },
+    {
+      "id": "snacks",
+      "label": "Aisle 3 · Left",
+      "x": 500,
+      "y": 165
+    },
+    {
+      "id": "junction-2-0",
+      "label": "Crossing 3.1",
+      "x": 160,
+      "y": 229
+    },
+    {
+      "id": "junction-2-1",
+      "label": "Crossing 3.2",
+      "x": 330,
+      "y": 229
+    },
+    {
+      "id": "junction-2-2",
+      "label": "Crossing 3.3",
+      "x": 500,
+      "y": 229
+    },
+    {
+      "id": "junction-2-3",
+      "label": "Crossing 3.4",
+      "x": 649,
+      "y": 229
+    },
+    {
+      "id": "bakery",
+      "label": "Aisle 1 · Right",
+      "x": 160,
+      "y": 289
+    },
+    {
+      "id": "chilled",
+      "label": "Aisle 2 · Right",
+      "x": 330,
+      "y": 289
+    },
+    {
+      "id": "drinks",
+      "label": "Aisle 3 · Right",
+      "x": 500,
+      "y": 289
+    },
+    {
+      "id": "junction-4-0",
+      "label": "Crossing 5.1",
+      "x": 160,
+      "y": 379
+    },
+    {
+      "id": "junction-4-1",
+      "label": "Crossing 5.2",
+      "x": 330,
+      "y": 379
+    },
+    {
+      "id": "junction-4-2",
+      "label": "Crossing 5.3",
+      "x": 500,
+      "y": 379
+    },
+    {
+      "id": "junction-4-3",
+      "label": "Crossing 5.4",
+      "x": 649,
+      "y": 379
+    },
+    {
+      "id": "entrance",
+      "label": "Entrance",
+      "x": 160,
+      "y": 433
+    },
+    {
+      "id": "checkout",
+      "label": "Checkout",
+      "x": 649,
+      "y": 433
+    }
+  ],
+  "paths": [
+    [
+      "junction-0-0",
+      "junction-0-1"
+    ],
+    [
+      "junction-0-1",
+      "junction-0-2"
+    ],
+    [
+      "junction-0-2",
+      "junction-0-3"
+    ],
+    [
+      "junction-2-0",
+      "junction-2-1"
+    ],
+    [
+      "junction-2-1",
+      "junction-2-2"
+    ],
+    [
+      "junction-2-2",
+      "junction-2-3"
+    ],
+    [
+      "junction-4-0",
+      "junction-4-1"
+    ],
+    [
+      "junction-4-1",
+      "junction-4-2"
+    ],
+    [
+      "junction-4-2",
+      "junction-4-3"
+    ],
+    [
+      "junction-0-0",
+      "produce"
+    ],
+    [
+      "produce",
+      "junction-2-0"
+    ],
+    [
+      "junction-2-0",
+      "bakery"
+    ],
+    [
+      "bakery",
+      "junction-4-0"
+    ],
+    [
+      "junction-0-1",
+      "pantry"
+    ],
+    [
+      "pantry",
+      "junction-2-1"
+    ],
+    [
+      "junction-2-1",
+      "chilled"
+    ],
+    [
+      "chilled",
+      "junction-4-1"
+    ],
+    [
+      "junction-0-2",
+      "snacks"
+    ],
+    [
+      "snacks",
+      "junction-2-2"
+    ],
+    [
+      "junction-2-2",
+      "drinks"
+    ],
+    [
+      "drinks",
+      "junction-4-2"
+    ],
+    [
+      "junction-0-3",
+      "junction-2-3"
+    ],
+    [
+      "junction-2-3",
+      "junction-4-3"
+    ],
+    [
+      "entrance",
+      "junction-4-0"
+    ],
+    [
+      "junction-4-3",
+      "checkout"
+    ]
+  ],
+  "metersPerUnit": 0.055,
+  "fixtures": [
+    {
+      "id": "wall-left-upper",
+      "x": 55,
+      "y": 121,
+      "w": 44,
+      "h": 83,
+      "faces": [
+        [
+          "produce",
+          "east"
+        ]
+      ]
+    },
+    {
+      "id": "wall-left-lower",
+      "x": 55,
+      "y": 256,
+      "w": 44,
+      "h": 85
+    },
+    {
+      "id": "rack-one-upper",
+      "x": 218,
+      "y": 121,
+      "w": 64,
+      "h": 83,
+      "faces": [
+        [
+          "bakery",
+          "west",
+          false
+        ],
+        [
+          "pantry",
+          "east",
+          true
+        ]
+      ]
+    },
+    {
+      "id": "rack-one-lower",
+      "x": 218,
+      "y": 256,
+      "w": 64,
+      "h": 85,
+      "faces": [
+        [
+          "bakery",
+          "west",
+          true
+        ],
+        [
+          "pantry",
+          "east",
+          false
+        ]
+      ]
+    },
+    {
+      "id": "rack-two-upper",
+      "x": 388,
+      "y": 121,
+      "w": 64,
+      "h": 83,
+      "faces": [
+        [
+          "chilled",
+          "west",
+          false
+        ],
+        [
+          "snacks",
+          "east",
+          true
+        ]
+      ]
+    },
+    {
+      "id": "rack-two-lower",
+      "x": 388,
+      "y": 256,
+      "w": 64,
+      "h": 85,
+      "faces": [
+        [
+          "chilled",
+          "west",
+          true
+        ],
+        [
+          "snacks",
+          "east",
+          false
+        ]
+      ]
+    },
+    {
+      "id": "rack-three-upper",
+      "x": 558,
+      "y": 121,
+      "w": 64,
+      "h": 83,
+      "faces": [
+        [
+          "drinks",
+          "west",
+          false
+        ]
+      ]
+    },
+    {
+      "id": "rack-three-lower",
+      "x": 558,
+      "y": 256,
+      "w": 64,
+      "h": 85,
+      "faces": [
+        [
+          "drinks",
+          "west"
+        ]
+      ]
+    },
+    {
+      "id": "wall-right",
+      "x": 710,
+      "y": 121,
+      "w": 38,
+      "h": 220
+    },
+    {
+      "id": "wall-north",
+      "x": 106,
+      "y": 50,
+      "w": 589,
+      "h": 23
+    },
+    {
+      "id": "lane-1",
+      "x": 302,
+      "y": 414,
+      "w": 47,
+      "h": 37,
+      "checkout": true
+    },
+    {
+      "id": "lane-2",
+      "x": 375,
+      "y": 414,
+      "w": 47,
+      "h": 37,
+      "checkout": true
+    },
+    {
+      "id": "lane-3",
+      "x": 448,
+      "y": 414,
+      "w": 47,
+      "h": 37,
+      "checkout": true
+    },
+    {
+      "id": "lane-4",
+      "x": 521,
+      "y": 414,
+      "w": 47,
+      "h": 37,
+      "checkout": true
+    }
+  ],
+  "aisles": [
+    {
+      "x": 160,
+      "label": "Aisle 1",
+      "sections": [
+        "produce",
+        "bakery"
+      ]
+    },
+    {
+      "x": 330,
+      "label": "Aisle 2",
+      "sections": [
+        "pantry",
+        "chilled"
+      ]
+    },
+    {
+      "x": 500,
+      "label": "Aisle 3",
+      "sections": [
+        "snacks",
+        "drinks"
+      ]
+    }
+  ],
+  "sections": {
+    "produce": {
+      "label": "Aisle 1 · Left",
+      "side": "Left",
+      "name": "Produce"
+    },
+    "bakery": {
+      "label": "Aisle 1 · Right",
+      "side": "Right",
+      "name": "Bakery"
+    },
+    "pantry": {
+      "label": "Aisle 2 · Left",
+      "side": "Left",
+      "name": "Pasta & cereal"
+    },
+    "chilled": {
+      "label": "Aisle 2 · Right",
+      "side": "Right",
+      "name": "Eggs & dairy"
+    },
+    "snacks": {
+      "label": "Aisle 3 · Left",
+      "side": "Left",
+      "name": "Snacks"
+    },
+    "drinks": {
+      "label": "Aisle 3 · Right",
+      "side": "Right",
+      "name": "Drinks"
+    }
+  }
+}

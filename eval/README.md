@@ -28,3 +28,61 @@ If you use an LLM judge: your own labels for 20+ cases (`id`, `label`, `comment`
 ## `shifted.csv`: the drift demo
 
 10 or more inputs that you shifted on purpose (one `input` column): darker photos, another language, another customer segment… `uv run python main.py drift-demo` checks that your alert fires on these and stays quiet on the `normal` cases.
+
+## Aisle Run case format
+
+The image path in `input` is relative to the repository. Use a photo of a
+grocery list without personal details. Use `store.json` for canonical product
+IDs. The team must write and label its own cases.
+
+- `expected` is a JSON object with `review` (boolean) and optional
+  `vision_ids` and `product_ids` (ordered arrays). `vision_ids` scores the
+  vision stage's exact catalog projection, where `null` means no direct match.
+  `product_ids` scores the agent's decisions, where `null` means no product
+  should be assigned. Add an optional `agent_items` array with the team's clean
+  transcription to test the agent independently of the photo reader. Omit an
+  array when that metric doesn't apply. Use your
+  CSV editor's quoting for JSON fields.
+- `baseline` is a JSON object with `correct` (whether the baseline completed the
+  task) and optionally `meters` (walking distance on the same map). Use a
+  consistent baseline agreed by the team, and document it in the report.
+- `reference.csv` and `shifted.csv` contain image paths. The starter monitors
+  grayscale photo brightness through the existing PSI monitor. The team needs
+  to verify that its normal and shifted sets behave correctly and justify the
+  chosen threshold.
+
+The structured output is scored directly. The starter records standard
+paid-tier cost estimates in EUR using USD prices of 0.30 and 2.50 per million
+input and output tokens, respectively, at an illustrative EUR/USD conversion
+of €0.90 per US dollar. Actual free-tier charges differ.
+
+## Preparing the runs
+
+1. Put the team's images under `eval/inputs/` and use repository-relative paths in the CSVs.
+   Save the CSVs as UTF-8 without a byte order mark for compatibility with the course checker.
+2. For a 30-case split, one option is 17 normal, 5 hard, 5 review and 3 out-of-scope.
+   Photograph 30 additional normal lists with the same lighting and camera setup as typical
+   normal cases. For the shifted set, include at least 10 different dimmer photos or exposure
+   edits of the team's photos. The live dashboard checks drift after 20 requests in its window,
+   so prepare 20 shifted inputs if you want to demonstrate drift on the live dashboard itself.
+3. For each evaluation case, agree on the expected catalog choices and whether it needs human
+   review. Use the same store layout for app and baseline distances. Describe how the baseline
+   route was obtained. Keep distance estimates separate from any claims about actual shopper time.
+4. Run `uv run python prepare_eval.py` before calling any model. It checks the case mix,
+   labels, image paths and repeated image bytes, and previews the same photo-brightness
+   drift rule used by the app. If normal photos trigger or darker ones do not, inspect
+   the sets and justify any threshold changes in the report.
+5. After preflight passes, run these from the repo root:
+
+   ```sh
+   uv run python prepare_eval.py --write-reference
+   uv run python main.py evaluate
+   uv run python main.py drift-demo
+   uv run python check.py
+   ```
+
+   The offline writer produces the same brightness column as `main.py reference`
+   without spending Gemini quota. The required `drift-demo` command still runs the
+   actual pipeline. Keep `eval/results.csv` and `monitoring/reference_features.csv`
+   with the team-authored inputs. Record the final metrics, alert justification,
+   review policy and go/no-go decision in `REPORT.md`.

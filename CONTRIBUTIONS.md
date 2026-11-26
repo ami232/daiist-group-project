@@ -6,6 +6,7 @@
 
 | First name | GitHub username | Main areas |
 |---|---|---|
+| Jimena | Jnavarro-web | Project coordination, app workflow and design, Render, report and presentation |
 | | | |
 | | | |
 | | | |
@@ -18,4 +19,5 @@
 
 | Date | Who | What |
 |---|---|---|
-| | | |
+| 2026-11-19 | Jimena | Directed the shopper and staff prototype, set up the Render deployment with Codex assistance, and coordinated the six-person work split. |
+| 2026-11-21 | Jimena | Prepared the submission draft and worked example with Codex assistance. |
