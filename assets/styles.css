@@ -584,3 +584,48 @@ footer { opacity: .75; }
   .mai-summary__value--text { font-size: var(--mai-fs-lg); }
   .mai-order__band { gap: var(--mai-s3); }
 }
+
+/* =============================================================================
+   WP6 · Adaptive Intelligence (RL) section
+   ============================================================================= */
+.mai-rl-section { display: flex; flex-direction: column; gap: var(--mai-s4); margin-top: var(--mai-s6); padding-top: var(--mai-s6); border-top: 1px solid var(--mai-border); }
+.mai-rl-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--mai-s4); flex-wrap: wrap; }
+.mai-rl-head .mai-subtle { max-width: 720px; margin: 4px 0 0; font-size: var(--mai-fs-md); }
+.mai-rl-head__meta { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.mai-h1--sm { font-size: var(--mai-fs-xl); }
+.mai-kpi-row--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mai-cycle { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--mai-s5); counter-reset: c; }
+.mai-cycle li { position: relative; display: flex; flex-direction: column; gap: 4px; padding: var(--mai-s4); background: #F8FAFC; border: 1px solid var(--mai-border); border-radius: var(--mai-r-md); font-size: var(--mai-fs-sm); color: var(--mai-steel-text); line-height: 1.45; }
+.mai-cycle li strong { color: var(--mai-deep-ocean); font-size: var(--mai-fs-md); }
+.mai-cycle li:not(:last-child)::after { content: ""; position: absolute; right: -15px; top: 50%; width: 10px; height: 10px; border-top: 2px solid var(--mai-petrol); border-right: 2px solid var(--mai-petrol); transform: translateY(-50%) rotate(45deg); }
+.mai-cycle li:last-child::before { content: "back to feedback"; position: absolute; right: 12px; top: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--mai-petrol-text); }
+.mai-cycle__icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--mai-ice-soft); color: var(--mai-petrol-text); margin-bottom: 4px; }
+.mai-forest { display: grid; gap: var(--mai-s3); }
+.mai-forest__row { display: grid; grid-template-columns: 110px minmax(0, 1fr) 120px; gap: var(--mai-s3); align-items: center; font-size: var(--mai-fs-sm); }
+.mai-forest__name { font-weight: 600; color: var(--mai-ink); }
+.mai-forest__track { position: relative; height: 18px; border-radius: 4px; background: repeating-linear-gradient(90deg, #EDF1F5 0 1px, transparent 1px 10%), #F8FAFC; border: 1px solid var(--mai-border); }
+.mai-forest__ci { position: absolute; top: 6px; height: 6px; border-radius: 999px; opacity: .45; }
+.mai-forest__mean { position: absolute; top: 50%; width: 12px; height: 12px; margin-left: -6px; transform: translateY(-50%); border-radius: 50%; background: #fff; border: 3px solid; }
+.mai-forest__val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--mai-deep-ocean); }
+.mai-forest__val small { font-weight: 500; color: var(--mai-steel-text); }
+.mai-forest__axis { display: flex; justify-content: space-between; margin-left: calc(110px + var(--mai-s3)); margin-right: calc(120px + var(--mai-s3)); font-size: 11px; color: var(--mai-steel-text); }
+.mai-table--rl th small { display: block; font-weight: 400; color: var(--mai-steel-text); font-size: 11px; margin-left: 16px; }
+.mai-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.mai-kv--compact li { font-size: var(--mai-fs-sm); padding: 7px 0; }
+.mai-kv--compact strong { font-variant-numeric: tabular-nums; color: var(--mai-deep-ocean); }
+.mai-sim { border: 1.5px dashed var(--mai-stub-line); background: #FDFCFF; }
+.mai-sim .mai-card__icon { background: var(--mai-stub-bg); color: var(--mai-stub); }
+.mai-sim .mai-banner { margin-bottom: var(--mai-s4); }
+@media (max-width: 1100px) {
+  .mai-cycle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mai-cycle li::after { display: none; }
+  .mai-kpi-row--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .mai-cycle { grid-template-columns: minmax(0, 1fr); }
+  .mai-cycle li:last-child::before { display: none; }
+  .mai-forest__row { grid-template-columns: 82px minmax(0, 1fr) 76px; }
+  .mai-forest__val small { display: none; }
+  .mai-forest__axis { margin-left: calc(82px + var(--mai-s3)); margin-right: calc(76px + var(--mai-s3)); }
+  .mai-table--rl { display: block; overflow-x: auto; }
+}

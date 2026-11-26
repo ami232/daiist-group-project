@@ -6,7 +6,7 @@
 
 | First name | GitHub username | Main areas |
 |---|---|---|
-| Manuela | manueladominguez | Repository setup, business case, interface and branding (WP7) |
+| Manuela | manueladominguez | Repository setup, business case, interface and branding (WP7), reinforcement-learning bandit (WP6) |
 | | | |
 | | | |
 | | | |
@@ -24,11 +24,5 @@
 | 2026-11-25 | Manuela | WP0 setup: maintai/ package with the contracts between modules (schemas.py) and stubs for every component, pipeline wired with deterministic offline arm, minimal App tab, .env.example, render.yaml (maintai, live mode on Render), dependencies (scikit-learn, google-genai, pydantic). Code written with AI assistance (Claude Code) and tested locally without API calls |
 | 2026-11-25 | Manuela | Created the Render account and Blueprint, configured GEMINI_API_KEY on Render and deployed the first version (web service + PostgreSQL logs) at https://maintai-238a.onrender.com. Smoke-tested the App and Monitoring tabs online (2 requests, 2 ratings, stub components only) |
 | 2026-11-25 | Manuela | Merged PR #1 (WP0) into main |
-| 2026-11-26 | Manuela | WP7 interface (initial implementation against the stub components):
-  - chose the Aerospace Blue identity with accessible colour variants, and designed the original logo and favicon;
-  - built the CSS design system;
-  - App tab: machine-reading form with sample readings, empty / loading / error / out-of-scope / development states, executive summary, risk gauge, failure-mode bars, physical indicators against the AI4I dataset rules, work order, financial insight consistent with economics.py, agent trace and feedback that reveals the bandit's writing style only after the vote;
-  - Monitoring tab: executive dashboard built on monitor.py;
-  - API: /run is now the only public endpoint.
-
-  Design decisions, review of every iteration and visual approval by Manuela. Code written with AI assistance (Claude Code); ChatGPT used to review the requirements and draft prompts. Tested locally without API calls (docs/WP7_UI.md) |
+| 2026-11-26 | Manuela | WP7 interface (initial implementation against the stub components): Aerospace Blue identity with accessible colour variants, original logo and favicon, CSS design system; App tab with machine-reading form, sample readings, empty/loading/error/out-of-scope/development states, executive summary, risk gauge, failure-mode bars, physical indicators against the AI4I dataset rules, work order, financial insight consistent with economics.py, agent trace and blind feedback (style revealed after the vote); Monitoring executive dashboard built on monitor.py; /run is the only public endpoint. Design decisions, review of every iteration and visual approval by Manuela. Code written with AI assistance (Claude Code); ChatGPT used to review the requirements and draft prompts. Tested locally without API calls (docs/WP7_UI.md) |
+| 2026-11-26 | Manuela | WP6 reinforcement-learning bandit: Thompson sampling over the three writing styles; production prior chosen as neutral Beta(1, 1) after comparing it in simulation with the capped plan prior and a wrong prior; reward and eligibility rules (real traffic only, no stub/degraded/other-version records, latest rating per request); explicit exploration label, policy history without future information, fallback to the prior if the logs fail; reproducible simulator (Thompson vs random, cumulative regret); Adaptive Intelligence dashboard in Monitoring; 23 tests; scipy declared as a direct dependency. Methodology, prior and safety scope decided and reviewed by Manuela. Code written with AI assistance (Claude Code); ChatGPT used to review the requirements and draft prompts. No real feedback yet: simulated results only (docs/WP6_BANDIT.md, REPORT.md bonus section) |
