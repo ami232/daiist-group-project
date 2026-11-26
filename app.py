@@ -11,6 +11,12 @@ assets/ (CSS design system, logo, favicon). This file only wires events.
 The visible form builds the JSON reading; a hidden text box carries it to the
 public `/run` endpoint, which still takes a single argument. Every other event
 is `api_visibility="private"`, so it is not published as an API endpoint.
+
+Hardening (WP6/WP7): a queue with a bounded size and a concurrency limit for
+/run (Render free: 0.15 CPU, 512 MB), and a random, temporary session tag that
+limits feedback abuse (maintai/feedback_guard.py). The tag is not an identity
+and no personal data is logged; `gr.Request` is injected by Gradio and is not
+an API parameter, so /run still takes exactly one text argument.
 """
 
 import json
@@ -25,7 +31,7 @@ import env
 import logbook
 import monitor
 import pipeline
-from maintai import agent, bandit, component_a
+from maintai import agent, bandit, component_a, feedback_guard
 from maintai.schemas import MachineInput
 from ui import components as ui
 from ui import dashboard
@@ -38,12 +44,31 @@ LOG_TARGET = logbook.start()
 TITLE = "MaintAI – Intelligent Maintenance Advisor"
 DESCRIPTION = "For maintenance managers: predicts the failure risk of a machine process and drafts a work order to approve. Plant data and systems are simulated."
 ASSETS = Path(__file__).resolve().parent / "assets"
+# Concurrency (Render free tier: 0.15 CPU, 512 MB). A request is short on CPU and mostly
+# waits for Gemini once WP3 is live, so two at a time keep the CPU busy without doubling
+# memory peaks (each request loads the logs for the bandit). Extra requests wait in a
+# bounded queue; when it is full Gradio refuses new ones instead of piling them up.
+def _positive_int(name: str, default: int) -> int:
+    """An optional positive integer setting; a missing or invalid value falls back to the default."""
+    try:
+        value = int(os.environ.get(name, "").strip() or default)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+RUN_CONCURRENCY = _positive_int("MAINTAI_RUN_CONCURRENCY", 2)
+QUEUE_MAX_SIZE = _positive_int("MAINTAI_QUEUE_MAX_SIZE", 16)
+FEEDBACK_GUARD = feedback_guard.FeedbackGuard()
 STUBS = ui.stub_parts({"component_a": component_a.MODEL_VERSION, "component_b": agent.PROMPT_VERSION,
                        "bandit": bandit.POLICY_VERSION})
 
 
-def serve(raw_input: str) -> dict:
-    """Run one request through the pipeline, log it, and return the logged record."""
+def serve(raw_input: str, session_tag: str | None = None) -> dict:
+    """Run one request through the pipeline, log it, and return the logged record.
+
+    `session_tag` is optional (check.py calls serve(raw_input)); the UI passes the
+    random session tag used to cap how many ratings per session train the bandit."""
     started = time.perf_counter()
     try:  # WP6: the policy is rebuilt from the logs (Postgres on Render) on every request
         logs, policy_from = logbook.load(), "logs"
@@ -54,7 +79,8 @@ def serve(raw_input: str) -> dict:
     result = pipeline.run(raw_input, arm=decision.arm)
     extra = {"source": os.environ.get("MAINTAI_SOURCE", "real"), "arm_probs": decision.arm_probs,
              "bandit_explore": decision.explore, "bandit_greedy_arm": decision.greedy_arm,
-             "bandit_n_feedback": decision.n_feedback, "bandit_policy_from": policy_from}
+             "bandit_n_feedback": decision.n_feedback, "bandit_policy_from": policy_from,
+             "session_tag": session_tag}
     return logbook.log_request(result | extra | {"latency_s": round(time.perf_counter() - started, 3)})
 
 
@@ -83,12 +109,13 @@ def build_request(machine_type, air, process, rpm, torque, wear):
     return json.dumps(values), ui.loading_state(), gr.update(visible=False), ""
 
 
-def on_run(raw_input):
-    """The public /run endpoint (one text argument, as check.py sends it)."""
+def on_run(raw_input, request: gr.Request = None):
+    """The public /run endpoint (one text argument, as check.py sends it).
+    `request` is injected by Gradio (not an API input); only its random session_hash is used."""
     if raw_input is None or not str(raw_input).strip():
         raise gr.Error("Give me an input first.")
     try:
-        record = serve(raw_input)
+        record = serve(raw_input, session_tag=feedback_guard.tag_from_request(request))
     except Exception as error:  # shown as the error state; the traceback goes to the server log
         traceback.print_exc()
         raise gr.Error(f"The analysis service failed ({type(error).__name__}).", title="Analysis failed") from error
@@ -97,12 +124,25 @@ def on_run(raw_input):
     return ui.results(record), record["id"], record.get("arm", ""), gr.update(visible=True), ""
 
 
-def on_feedback(request_id, arm, value):
+def on_feedback(request_id, arm, value, request: gr.Request = None):
     if not request_id:
         gr.Warning("Run an analysis first.")
         return ""
+    allowed, reason = FEEDBACK_GUARD.allow(feedback_guard.tag_from_request(request), request_id)
+    if not allowed:
+        gr.Warning("You have already rated this order several times." if reason == "request_limit"
+                   else "Rating limit reached for this session. Thank you for your feedback.")
+        return gr.skip()
     logbook.log_feedback(request_id, value)
     return ui.feedback_thanks(value, arm)
+
+
+def on_useful(request_id, arm, request: gr.Request = None):
+    return on_feedback(request_id, arm, +1, request)
+
+
+def on_not_useful(request_id, arm, request: gr.Request = None):
+    return on_feedback(request_id, arm, -1, request)
 
 
 # --- Monitoring tab ----------------------------------------------------------
@@ -177,10 +217,11 @@ with gr.Blocks(title=TITLE, fill_width=True) as demo:
                 run_outputs = [results, request_id, arm_state, feedback_row, thanks]
                 (run_button
                  .click(build_request, form, [raw_input, results, feedback_row, thanks], show_progress="hidden", **PRIVATE)
-                 .success(on_run, raw_input, run_outputs, api_name="run", show_progress="hidden")
+                 .success(on_run, raw_input, run_outputs, api_name="run", show_progress="hidden",
+                          concurrency_limit=RUN_CONCURRENCY, concurrency_id="run")
                  .failure(lambda: ui.error_state("The service did not return a result."), None, results, **PRIVATE))
-                up.click(lambda rid, arm: on_feedback(rid, arm, +1), [request_id, arm_state], thanks, **PRIVATE)
-                down.click(lambda rid, arm: on_feedback(rid, arm, -1), [request_id, arm_state], thanks, **PRIVATE)
+                up.click(on_useful, [request_id, arm_state], thanks, concurrency_limit=2, concurrency_id="feedback", **PRIVATE)
+                down.click(on_not_useful, [request_id, arm_state], thanks, concurrency_id="feedback", **PRIVATE)
 
             with gr.Tab("Monitoring", id="monitoring", elem_classes="mai-monitor"):
                 with gr.Row(equal_height=False, elem_classes="mai-pagehead-row"):
@@ -191,10 +232,13 @@ with gr.Blocks(title=TITLE, fill_width=True) as demo:
                         refresh = gr.Button("Refresh", variant="secondary", size="sm",
                                             icon=str(ASSETS / "icons" / "refresh.svg"))
                 dashboard_html = gr.HTML(elem_classes="mai-html")
-                refresh.click(on_refresh, None, [dashboard_html, updated], **PRIVATE)
-                demo.load(on_refresh, None, [dashboard_html, updated], **PRIVATE)
+                refresh.click(on_refresh, None, [dashboard_html, updated], concurrency_limit=1, concurrency_id="monitor", **PRIVATE)
+                demo.load(on_refresh, None, [dashboard_html, updated], concurrency_id="monitor", **PRIVATE)
 
         gr.HTML(ui.footer(STORAGE), elem_classes="mai-html")
+
+# Bounded queue: other events default to one at a time each.
+demo.queue(max_size=QUEUE_MAX_SIZE, default_concurrency_limit=1)
 
 
 if __name__ == "__main__":

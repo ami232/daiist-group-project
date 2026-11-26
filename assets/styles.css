@@ -629,3 +629,18 @@ footer { opacity: .75; }
   .mai-forest__axis { margin-left: calc(82px + var(--mai-s3)); margin-right: calc(76px + var(--mai-s3)); }
   .mai-table--rl { display: block; overflow-x: auto; }
 }
+
+/* WP6/WP7 hardening: provenance legend and science cards in Adaptive Intelligence */
+.mai-provenance { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mai-s2) var(--mai-s4); padding: var(--mai-s3) var(--mai-s4); border: 1px solid var(--mai-border); border-radius: var(--mai-r-md); background: var(--mai-white); font-size: var(--mai-fs-sm); color: var(--mai-steel-text); }
+.mai-provenance > span { display: inline-flex; align-items: center; gap: 6px; }
+.mai-provenance__title { font-weight: 600; color: var(--mai-ink); text-transform: uppercase; letter-spacing: .04em; font-size: 11px; }
+.mai-num--warn { color: var(--mai-warning); font-weight: 700; }
+.mai-rl-section .mai-table td .mai-badge { margin-left: 4px; font-size: 10px; padding: 1px 6px; }
+.mai-rl-section .mai-alerts { margin-top: var(--mai-s3); }
+@media (max-width: 640px) {
+  .mai-provenance { gap: var(--mai-s2); }
+  .mai-rl-section .mai-table { display: block; overflow-x: auto; }
+}
+@media (max-width: 640px) {
+  .mai-rl-section .mai-card__hint { display: none; }  /* keeps card titles readable at 375 px */
+}
