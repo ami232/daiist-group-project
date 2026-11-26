@@ -78,7 +78,7 @@ def render(logs: pd.DataFrame, reference: pd.DataFrame | None, storage: str) -> 
     <p class="mai-subtle">Run an analysis in the App tab. KPIs, charts and drift checks appear here as soon as
     requests are logged ({_e(storage)}). Nothing is shown before there is data.</p></div></div>
   </div>
-  {_rl_panel(logs)}
+  {_rl(logs)}
 </div>"""
 
     summary = dict(zip(monitor.summary(logs)["metric"], monitor.summary(logs)["value"]))
@@ -118,7 +118,7 @@ def render(logs: pd.DataFrame, reference: pd.DataFrame | None, storage: str) -> 
     {_card("Latency", "clock", _latency_chart(logs, summary), hint="Last 50 requests")}
     {_card("Outcome mix", "shield", _mix(logs), hint="All logged requests")}
   </div>
-  {_rl_panel(logs)}
+  {_rl(logs)}
   <p class="mai-footnote">Thresholds come from monitor.py and are placeholders until WP5 calibrates them on validation data.
   Logs: {_e(storage)}.</p>
 </div>"""
@@ -220,31 +220,8 @@ def _mix(logs: pd.DataFrame) -> str:
             f'<h3 class="mai-h3">Risk band</h3>{band_bar or "<p class=mai-subtle>No handled requests yet.</p>"}')
 
 
-def _rl_panel(logs: pd.DataFrame) -> str:
-    """Reserved for WP6. Shows only logged facts: requests and ratings per writing style."""
-    rows = ""
-    policy = "–"
-    if not logs.empty and "arm" in logs:
-        last = logs.iloc[-1]
-        probs = last.get("arm_probs") if isinstance(last.get("arm_probs"), dict) else {}
-        versions = last.get("versions") if isinstance(last.get("versions"), dict) else {}
-        policy = versions.get("bandit", "–")
-        for arm, label in ARM_LABELS.items():
-            sub = logs[logs["arm"] == arm]
-            r = sub["feedback"].dropna().astype(float)
-            pos = f"{(r > 0).mean():.0%}" if len(r) else "–"
-            p = probs.get(arm)
-            rows += (f'<tr><th scope="row">{_e(label)}</th><td class="mai-num">{"–" if p is None else f"{float(p):.0%}"}</td>'
-                     f'<td class="mai-num">{len(sub)}</td><td class="mai-num">{len(r)}</td><td class="mai-num">{pos}</td></tr>')
-    table = (f'<table class="mai-table"><thead><tr><th scope="col">Writing style</th><th scope="col" class="mai-num">Selection probability</th>'
-             f'<th scope="col" class="mai-num">Requests</th><th scope="col" class="mai-num">Ratings</th><th scope="col" class="mai-num">Positive</th></tr></thead>'
-             f'<tbody>{rows}</tbody></table>') if rows else '<p class="mai-subtle">No requests yet.</p>'
-    body = f"""
-<div class="mai-rl">
-  <div>{table}
-    <p class="mai-footnote">Counts from the logs. Selection probability is the one logged with the latest request (policy {_e(policy)}).</p></div>
-  <div class="mai-chart-empty mai-chart-empty--dashed">{icon("target", 22)}<strong>Posterior and learning curve</strong>
-    <span class="mai-subtle">Reserved for WP6: Thompson-sampling posterior per style (mean and credible interval), real vs
-    prior observations and cumulative reward. Appears when the bandit learns from feedback.</span></div>
-</div>"""
-    return _card("Reinforcement learning · writing-style bandit", "target", body, hint="WP6 · in progress", cls="mai-rl-card")
+def _rl(logs: pd.DataFrame) -> str:
+    """Adaptive Intelligence section (ui/rl_dashboard.py, WP6)."""
+    from ui import rl_dashboard
+
+    return rl_dashboard.render(logs)

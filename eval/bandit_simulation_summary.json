@@ -1,0 +1,205 @@
+{
+  "source": "simulated",
+  "note": "Simulated users with declared like-rates. Not real feedback. Not used by the live bandit.",
+  "runs": 100,
+  "rounds": 300,
+  "seed": 20261126,
+  "scenarios": {
+    "one_better": {
+      "checklist": 0.45,
+      "cost": 0.45,
+      "root_cause": 0.75
+    },
+    "all_equal": {
+      "checklist": 0.5,
+      "cost": 0.5,
+      "root_cause": 0.5
+    }
+  },
+  "priors": {
+    "neutral": {
+      "checklist": [
+        1.0,
+        1.0
+      ],
+      "cost": [
+        1.0,
+        1.0
+      ],
+      "root_cause": [
+        1.0,
+        1.0
+      ]
+    },
+    "capped_plan": {
+      "checklist": [
+        7.0,
+        5.0
+      ],
+      "cost": [
+        6.0,
+        6.0
+      ],
+      "root_cause": [
+        6.5,
+        5.5
+      ]
+    },
+    "wrong_belief": {
+      "checklist": [
+        10.0,
+        2.0
+      ],
+      "cost": [
+        6.0,
+        6.0
+      ],
+      "root_cause": [
+        6.0,
+        6.0
+      ]
+    }
+  },
+  "comparison": [
+    {
+      "scenario": "one_better",
+      "prior": "neutral",
+      "best_arm": "root_cause",
+      "regret_ts_30": 3.74,
+      "regret_random_30": 6.0,
+      "p_best_30": 0.734,
+      "regret_ts_50": 5.0,
+      "regret_random_50": 10.0,
+      "p_best_50": 0.82,
+      "regret_ts_100": 7.0,
+      "regret_random_100": 20.0,
+      "p_best_100": 0.915,
+      "regret_ts_300": 9.39,
+      "regret_random_300": 60.0,
+      "p_best_300": 0.979,
+      "first_round_p_best_ge_0.8": 45,
+      "final_p_select": {
+        "checklist": 0.012,
+        "cost": 0.009,
+        "root_cause": 0.979
+      }
+    },
+    {
+      "scenario": "one_better",
+      "prior": "capped_plan",
+      "best_arm": "root_cause",
+      "regret_ts_30": 4.19,
+      "regret_random_30": 6.0,
+      "p_best_30": 0.696,
+      "regret_ts_50": 5.66,
+      "regret_random_50": 10.0,
+      "p_best_50": 0.81,
+      "regret_ts_100": 7.51,
+      "regret_random_100": 20.0,
+      "p_best_100": 0.924,
+      "regret_ts_300": 9.25,
+      "regret_random_300": 60.0,
+      "p_best_300": 0.985,
+      "first_round_p_best_ge_0.8": 50,
+      "final_p_select": {
+        "checklist": 0.007,
+        "cost": 0.008,
+        "root_cause": 0.985
+      }
+    },
+    {
+      "scenario": "one_better",
+      "prior": "wrong_belief",
+      "best_arm": "root_cause",
+      "regret_ts_30": 6.9,
+      "regret_random_30": 6.0,
+      "p_best_30": 0.434,
+      "regret_ts_50": 9.7,
+      "regret_random_50": 10.0,
+      "p_best_50": 0.632,
+      "regret_ts_100": 12.98,
+      "regret_random_100": 20.0,
+      "p_best_100": 0.85,
+      "regret_ts_300": 15.89,
+      "regret_random_300": 60.0,
+      "p_best_300": 0.986,
+      "first_round_p_best_ge_0.8": 80,
+      "final_p_select": {
+        "checklist": 0.007,
+        "cost": 0.007,
+        "root_cause": 0.986
+      }
+    },
+    {
+      "scenario": "all_equal",
+      "prior": "neutral",
+      "best_arm": null,
+      "regret_ts_30": 0.0,
+      "regret_random_30": 0.0,
+      "p_best_30": null,
+      "regret_ts_50": 0.0,
+      "regret_random_50": 0.0,
+      "p_best_50": null,
+      "regret_ts_100": 0.0,
+      "regret_random_100": 0.0,
+      "p_best_100": null,
+      "regret_ts_300": 0.0,
+      "regret_random_300": 0.0,
+      "p_best_300": null,
+      "first_round_p_best_ge_0.8": null,
+      "final_p_select": {
+        "checklist": 0.381,
+        "cost": 0.29,
+        "root_cause": 0.329
+      }
+    },
+    {
+      "scenario": "all_equal",
+      "prior": "capped_plan",
+      "best_arm": null,
+      "regret_ts_30": 0.0,
+      "regret_random_30": 0.0,
+      "p_best_30": null,
+      "regret_ts_50": 0.0,
+      "regret_random_50": 0.0,
+      "p_best_50": null,
+      "regret_ts_100": 0.0,
+      "regret_random_100": 0.0,
+      "p_best_100": null,
+      "regret_ts_300": 0.0,
+      "regret_random_300": 0.0,
+      "p_best_300": null,
+      "first_round_p_best_ge_0.8": null,
+      "final_p_select": {
+        "checklist": 0.336,
+        "cost": 0.272,
+        "root_cause": 0.392
+      }
+    },
+    {
+      "scenario": "all_equal",
+      "prior": "wrong_belief",
+      "best_arm": null,
+      "regret_ts_30": 0.0,
+      "regret_random_30": 0.0,
+      "p_best_30": null,
+      "regret_ts_50": 0.0,
+      "regret_random_50": 0.0,
+      "p_best_50": null,
+      "regret_ts_100": 0.0,
+      "regret_random_100": 0.0,
+      "p_best_100": null,
+      "regret_ts_300": 0.0,
+      "regret_random_300": 0.0,
+      "p_best_300": null,
+      "first_round_p_best_ge_0.8": null,
+      "final_p_select": {
+        "checklist": 0.489,
+        "cost": 0.242,
+        "root_cause": 0.269
+      }
+    }
+  ],
+  "production_prior": "neutral",
+  "production_prior_reason": "No evidence yet that one style is better. In simulation the capped plan prior only helps when its assumed ranking happens to be right, and a wrong prior costs extra regret before real ratings correct it. With a neutral prior every learned preference comes from real ratings, so the simulated/real separation is exact."
+}

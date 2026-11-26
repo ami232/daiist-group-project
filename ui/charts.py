@@ -116,7 +116,7 @@ def stacked_costs(rows: list[tuple[str, list[tuple[str, float, str]]]], fmt) -> 
 
 def line_chart(series: dict[str, list[float]], labels: list[str], y_max: float | None = None,
                y_fmt=lambda v: f"{v:.0%}", tones: list[str] | None = None, reference: tuple[float, str] | None = None,
-               title: str = "") -> str:
+               title: str = "", markers: bool = True, dashed: tuple[str, ...] = (), max_xlabels: int = 6) -> str:
     """Line chart over shared x labels. Draws only the points it is given."""
     w, h, pl, pr, pt, pb = 640, 220, 44, 12, 12, 28
     tones = tones or ["info", "orange", "brand", "stub"]
@@ -144,11 +144,13 @@ def line_chart(series: dict[str, list[float]], labels: list[str], y_max: float |
     for (name, vs), tone in zip(series.items(), tones):
         pts = [xy(i, v) for i, v in enumerate(vs) if v is not None]
         color = TONE_COLOR[tone]
+        dash = ' stroke-dasharray="6 5"' if name in dashed else ""
         if len(pts) > 1:
-            lines += f'<polyline points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in pts)}" fill="none" stroke="{color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>'
-        lines += "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.2" fill="#fff" stroke="{color}" stroke-width="2"/>' for x, y in pts)
+            lines += f'<polyline points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in pts)}" fill="none" stroke="{color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"{dash}/>'
+        if markers or len(pts) == 1:
+            lines += "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.2" fill="#fff" stroke="{color}" stroke-width="2"/>' for x, y in pts)
         legend += f'<li><span style="background:{color}"></span>{_e(name)}</li>'
-    step = max(1, math.ceil(n / 6))
+    step = max(1, math.ceil(n / max_xlabels))
     xlabels = "".join(f'<text x="{xy(i, 0)[0]:.1f}" y="{h - 8}" text-anchor="middle" class="mai-chart__axis">{_e(lab)}</text>'
                       for i, lab in enumerate(labels) if i % step == 0 or i == n - 1)
     rows = "".join(f"<tr><th scope='row'>{_e(lab)}</th>" + "".join(f"<td>{'' if vs[i] is None else _e(y_fmt(vs[i]))}</td>" for vs in series.values()) + "</tr>"

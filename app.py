@@ -45,9 +45,16 @@ STUBS = ui.stub_parts({"component_a": component_a.MODEL_VERSION, "component_b": 
 def serve(raw_input: str) -> dict:
     """Run one request through the pipeline, log it, and return the logged record."""
     started = time.perf_counter()
-    arm, arm_probs = bandit.choose_arm()  # WP6: pass logbook.load() once the bandit learns
-    result = pipeline.run(raw_input, arm=arm)
-    extra = {"source": os.environ.get("MAINTAI_SOURCE", "real"), "arm_probs": arm_probs}
+    try:  # WP6: the policy is rebuilt from the logs (Postgres on Render) on every request
+        logs, policy_from = logbook.load(), "logs"
+    except Exception:  # logs unreachable: choose from the prior alone rather than fail the request
+        traceback.print_exc()
+        logs, policy_from = None, "prior_only"
+    decision = bandit.decide(logs)
+    result = pipeline.run(raw_input, arm=decision.arm)
+    extra = {"source": os.environ.get("MAINTAI_SOURCE", "real"), "arm_probs": decision.arm_probs,
+             "bandit_explore": decision.explore, "bandit_greedy_arm": decision.greedy_arm,
+             "bandit_n_feedback": decision.n_feedback, "bandit_policy_from": policy_from}
     return logbook.log_request(result | extra | {"latency_s": round(time.perf_counter() - started, 3)})
 
 

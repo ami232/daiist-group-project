@@ -35,7 +35,7 @@ Owner: Manuela. Status: initial implementation done against the stub components.
   - KPI tiles, alerts with severity and the rules applied.
   - Charts of requests per period, quality signals, latency, outcome mix and risk bands.
   - PSI per feature against its threshold.
-  - A panel reserved for the RL dashboard (WP6).
+  - The Adaptive Intelligence (RL) section, built in WP6 (`ui/rl_dashboard.py`, see `docs/WP6_BANDIT.md`).
   - An empty state for every section when there is not enough data.
   - A "Provisional data" banner that counts the stub records.
 
