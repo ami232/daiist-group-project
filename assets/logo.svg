@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 40" role="img" aria-label="MaintAI">
+  <title>MaintAI</title>
+  <rect width="40" height="40" rx="9" fill="#102E4A"/>
+  <path d="M6 27h4.6L14.6 13l5.4 11 5.4-11 4 14H34" fill="none" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="25.4" cy="13" r="4.6" fill="#102E4A"/>
+  <circle cx="25.4" cy="13" r="3" fill="#A8D8EA"/>
+  <text x="50" y="27.5" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="21" font-weight="700" letter-spacing="-0.4" fill="#102E4A">Maint<tspan fill="#006D8C">AI</tspan></text>
+</svg>
