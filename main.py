@@ -24,6 +24,7 @@ import pipeline
 
 ROOT = Path(__file__).resolve().parent
 CASES = ROOT / "eval" / "cases.csv"
+CASE_PLAN = ROOT / "eval" / "case-plan.csv"
 REFERENCE_INPUTS = ROOT / "eval" / "reference.csv"
 SHIFTED_INPUTS = ROOT / "eval" / "shifted.csv"
 
@@ -40,12 +41,15 @@ def read_inputs(path: Path, kind: str | None = None) -> list[str]:
 
 
 def features_of(inputs: list[str]) -> pd.DataFrame:
-    """Run each input through the pipeline (not logged) and keep its features."""
+    """Measure the same explicit sector feature saved by the live request logger."""
     rows = []
     for i, raw in enumerate(inputs, 1):
         print(f"  {i}/{len(inputs)}", end="\r", flush=True)
-        rows.append(pipeline.run(raw)["features"])
-    return pd.DataFrame(rows)
+        rows.append(pipeline.drift_features(raw))
+    features = pd.DataFrame(rows, columns=["outside_construction"])
+    if features.outside_construction.isna().any():
+        raise SystemExit("Each drift excerpt needs exactly one explicit Main CPV: XXXXXXXX line.")
+    return features
 
 
 def reference() -> None:
@@ -60,11 +64,12 @@ def reference() -> None:
     print("Commit it: the app and the drift demo read it.")
 
 
-def drift_demo() -> None:
+def drift_demo(practice: bool = False) -> None:
     ref = monitor.load_reference()
     if ref is None:
         raise SystemExit("No reference set. Run `uv run python main.py reference` first.")
-    normal, shifted = read_inputs(CASES, kind="normal"), read_inputs(SHIFTED_INPUTS)
+    normal = read_inputs(CASE_PLAN if practice else CASES, kind="normal")
+    shifted = read_inputs(SHIFTED_INPUTS)
     if not normal or not shifted:
         raise SystemExit("Need `normal` cases in eval/cases.csv and inputs in eval/shifted.csv.")
 
@@ -120,7 +125,11 @@ def run_entrypoint(name: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["reference", "evaluate", "drift-demo", "export-logs"])
+    parser.add_argument("--practice", action="store_true",
+                        help="Use the candidate plan for drift-demo before team labels are ready.")
     args = parser.parse_args()
+    if args.practice and args.command != "drift-demo":
+        parser.error("--practice is only used with drift-demo")
     env.load_env()
-    {"reference": reference, "evaluate": lambda: run_entrypoint("evaluate"), "drift-demo": drift_demo,
+    {"reference": reference, "evaluate": lambda: run_entrypoint("evaluate"), "drift-demo": lambda: drift_demo(args.practice),
      "export-logs": export_logs}[args.command]()

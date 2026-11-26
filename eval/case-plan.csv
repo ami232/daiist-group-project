@@ -1,0 +1,237 @@
+id,input,kind,expected,baseline,notes
+c01,"TED publication: 355347-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45216110
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Body governed by public law.
+Estimated total value excluding VAT: EUR 6,050,347.55.
+Contract duration: 12 months.
+Award criteria: price and other criteria.",normal,,,Person 1 | Call https://ted.europa.eu/en/notice/355347-2023/html | Award https://ted.europa.eu/en/notice/682972-2023/html
+c02,"TED publication: 263917-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45234110
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Body governed by public law.
+Estimated total value excluding VAT: EUR 21,842,953.62.
+Contract duration: 12 months.
+Award criteria: price and other criteria.",normal,,,Person 1 | Call https://ted.europa.eu/en/notice/263917-2023/html | Award https://ted.europa.eu/en/notice/745425-2023/html
+c03,"TED publication: 212483-2023.
+Anuncio de licitación de obra pública en España.
+Código CPV principal: 45244000
+Procedimiento abierto. El contrato no se divide en lotes.
+Valor total estimado, IVA excluido: 5.601.601,56 EUR.
+Plazo de ejecución: 8 meses.
+Se valorarán tanto el precio como otros criterios.",hard,,,Person 1 | Call https://ted.europa.eu/en/notice/212483-2023/html | Award https://ted.europa.eu/en/notice/657151-2023/html | Spanish wording and local number format
+c04,"TED publication: 15873-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45232140
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Other.
+Contract duration: 18 months.",review,,,Person 1 | Call https://ted.europa.eu/en/notice/15873-2023/html | Award https://ted.europa.eu/en/notice/776992-2023/html | Estimated budget omitted from this excerpt
+c05,"TED publication: 215323-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45233100
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Estimated total value excluding VAT: EUR 25,757,022.41.
+Contract duration: 30 months.
+Award criteria: price and other criteria.",normal,,,Person 1 | Call https://ted.europa.eu/en/notice/215323-2023/html | Award https://ted.europa.eu/en/notice/514735-2023/html
+c06,"TED publication: 27308-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45211300
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Estimated total value excluding VAT: EUR 8,077,209.46.
+Contract duration: 18 months.",normal,,,Person 2 | Call https://ted.europa.eu/en/notice/27308-2023/html | Award https://ted.europa.eu/en/notice/662474-2023/html
+c07,"TED publication: 366814-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45233120
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Estimated total value excluding VAT: EUR 8,933,251.65.
+Contract duration: 10 months.",normal,,,Person 2 | Call https://ted.europa.eu/en/notice/366814-2023/html | Award https://ted.europa.eu/en/notice/786286-2023/html
+c08,"TED publication: 66859-2023.
+Anuncio de licitación de obra pública en España.
+Código CPV principal: 45262311
+Procedimiento abierto. El contrato no se divide en lotes.
+Valor total estimado, IVA excluido: 14.072.199,64 EUR.
+Plazo de ejecución: 10 meses.",hard,,,Person 2 | Call https://ted.europa.eu/en/notice/66859-2023/html | Award https://ted.europa.eu/en/notice/776913-2023/html | Spanish wording and local number format
+c09,"TED publication: 187940-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45000000
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Other.
+Contract duration: 12 months.",review,,,Person 2 | Call https://ted.europa.eu/en/notice/187940-2023/html | Award https://ted.europa.eu/en/notice/472574-2023/html | Estimated budget omitted from this excerpt
+c10,"TED publication: 140239-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45234100
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Ministry or national authority.
+Estimated total value excluding VAT: EUR 29,903,577.17.
+Contract duration: 22 months.
+Award criteria: price and other criteria.",normal,,,Person 2 | Call https://ted.europa.eu/en/notice/140239-2023/html | Award https://ted.europa.eu/en/notice/542210-2023/html
+c11,"TED publication: 197741-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45212350
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Ministry or national authority.
+Estimated total value excluding VAT: EUR 17,288,099.71.
+Contract duration: 18 months.
+Award criteria: price and other criteria.",normal,,,Person 3 | Call https://ted.europa.eu/en/notice/197741-2023/html | Award https://ted.europa.eu/en/notice/547196-2023/html
+c12,"TED publication: 276432-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45234110
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Body governed by public law.
+Estimated total value excluding VAT: EUR 21,562,351.00.
+Contract duration: 16 months.
+Award criteria: price and other criteria.",normal,,,Person 3 | Call https://ted.europa.eu/en/notice/276432-2023/html | Award https://ted.europa.eu/en/notice/733057-2023/html
+c13,"TED publication: 89371-2023.
+Anuncio de licitación de obra pública en España.
+Código CPV principal: 45331110
+Procedimiento abierto. El contrato no se divide en lotes.
+Valor total estimado, IVA excluido: 229.290,17 EUR.
+Plazo de ejecución: 4 meses.",hard,,,Person 3 | Call https://ted.europa.eu/en/notice/89371-2023/html | Award https://ted.europa.eu/en/notice/238103-2023/html | Spanish wording and local number format
+c14,"TED publication: 203626-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45214000
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Contract duration: 17 months.",review,,,Person 3 | Call https://ted.europa.eu/en/notice/203626-2023/html | Award https://ted.europa.eu/en/notice/569832-2023/html | Estimated budget omitted from this excerpt
+c15,"TED publication: 660-2023.
+Contract notice for public cleaning services in Spain.
+Main CPV: 90910000
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Other.
+Estimated total value excluding VAT: EUR 817,910.34.
+Contract duration: 24 months.
+Award criteria: price and other criteria.",out_of_scope,,,Person 3 | Call https://ted.europa.eu/en/notice/660-2023/html
+c16,"TED publication: 16737-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45215100
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local agency.
+Estimated total value excluding VAT: EUR 5,431,916.90.
+Contract duration: 20 months.",normal,,,Person 4 | Call https://ted.europa.eu/en/notice/16737-2023/html | Award https://ted.europa.eu/en/notice/507862-2023/html
+c17,"TED publication: 186912-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45215100
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Estimated total value excluding VAT: EUR 25,043,830.04.
+Contract duration: 27 months.
+Award criteria: price and other criteria.",normal,,,Person 4 | Call https://ted.europa.eu/en/notice/186912-2023/html | Award https://ted.europa.eu/en/notice/638850-2023/html
+c18,"TED publication: 297261-2023.
+Anuncio de licitación de obra pública en España.
+Código CPV principal: 45000000
+Procedimiento abierto. El contrato no se divide en lotes.
+Valor total estimado, IVA excluido: 14.942.629,43 EUR.
+Plazo de ejecución: 22 meses.
+Se valorarán tanto el precio como otros criterios.",hard,,,Person 4 | Call https://ted.europa.eu/en/notice/297261-2023/html | Award https://ted.europa.eu/en/notice/566303-2023/html | Spanish wording and local number format
+c19,"TED publication: 441410-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45215212
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Contract duration: 26 months.",review,,,Person 4 | Call https://ted.europa.eu/en/notice/441410-2023/html | Award https://ted.europa.eu/en/notice/713264-2023/html | Estimated budget omitted from this excerpt
+c20,"TED publication: 2163-2023.
+Contract notice for public cleaning services in Spain.
+Main CPV: 90911200
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Estimated total value excluding VAT: EUR 335,558.64.
+Contract duration: 24 months.
+Award criteria: price and other criteria.",out_of_scope,,,Person 4 | Call https://ted.europa.eu/en/notice/2163-2023/html
+c21,"TED publication: 366326-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45213320
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Body governed by public law.
+Estimated total value excluding VAT: EUR 14,868,418.82.
+Contract duration: 15 months.
+Award criteria: price and other criteria.",normal,,,Person 5 | Call https://ted.europa.eu/en/notice/366326-2023/html | Award https://ted.europa.eu/en/notice/786447-2023/html
+c22,"TED publication: 8288-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45233140
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local agency.
+Estimated total value excluding VAT: EUR 713,029.46.
+Contract duration: 6 months.",normal,,,Person 5 | Call https://ted.europa.eu/en/notice/8288-2023/html | Award https://ted.europa.eu/en/notice/229256-2023/html
+c23,"TED publication: 485086-2023.
+Anuncio de licitación de obra pública en España.
+Código CPV principal: 45220000
+Procedimiento abierto. El contrato no se divide en lotes.
+Valor total estimado, IVA excluido: 5.601.932,42 EUR.
+Plazo de ejecución: 20 meses.",hard,,,Person 5 | Call https://ted.europa.eu/en/notice/485086-2023/html | Award https://ted.europa.eu/en/notice/682108-2023/html | Spanish wording and local number format
+c24,"TED publication: 444789-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45000000
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Ministry or national authority.
+Contract duration: 4 months.",review,,,Person 5 | Call https://ted.europa.eu/en/notice/444789-2023/html | Award https://ted.europa.eu/en/notice/700266-2023/html | Estimated budget omitted from this excerpt
+c25,"TED publication: 5916-2023.
+Contract notice for public cleaning services in Spain.
+Main CPV: 90911200
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Estimated total value excluding VAT: EUR 17,632,195.64.
+Contract duration: 60 months.",out_of_scope,,,Person 5 | Call https://ted.europa.eu/en/notice/5916-2023/html
+c26,"TED publication: 233493-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45233140
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local agency.
+Estimated total value excluding VAT: EUR 9,971,722.87.
+Contract duration: 16 months.",normal,,,Person 6 | Call https://ted.europa.eu/en/notice/233493-2023/html | Award https://ted.europa.eu/en/notice/705304-2023/html
+c27,"TED publication: 279004-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45233000
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Other.
+Estimated total value excluding VAT: EUR 25,718,000.28.
+Contract duration: 24 months.
+Award criteria: price and other criteria.",normal,,,Person 6 | Call https://ted.europa.eu/en/notice/279004-2023/html | Award https://ted.europa.eu/en/notice/587447-2023/html
+c28,"TED publication: 401080-2023.
+Anuncio de licitación de obra pública en España.
+Código CPV principal: 45000000
+Procedimiento abierto. El contrato no se divide en lotes.
+Valor total estimado, IVA excluido: 6.543.333,06 EUR.
+Plazo de ejecución: 15 meses.",hard,,,Person 6 | Call https://ted.europa.eu/en/notice/401080-2023/html | Award https://ted.europa.eu/en/notice/790729-2023/html | Spanish wording and local number format
+c29,"TED publication: 43105-2023.
+Contract notice for public construction works in Spain.
+Main CPV: 45211340
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Other.
+Contract duration: 25 months.
+Award criteria: price and other criteria.",review,,,Person 6 | Call https://ted.europa.eu/en/notice/43105-2023/html | Award https://ted.europa.eu/en/notice/518732-2023/html | Estimated budget omitted from this excerpt
+c30,"TED publication: 7628-2023.
+Contract notice for public cleaning services in Spain.
+Main CPV: 90911200
+Procedure: open.
+Division into lots: no.
+Contracting authority type: Regional or local authority.
+Estimated total value excluding VAT: EUR 1,636,445.46.
+Contract duration: 24 months.",out_of_scope,,,Person 6 | Call https://ted.europa.eu/en/notice/7628-2023/html

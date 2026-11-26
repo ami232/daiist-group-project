@@ -1,0 +1,44 @@
+{
+  "version": "ted-es-construction-2018-2023-v1",
+  "estimator": "hist_gradient_boosting",
+  "development_rows": 886,
+  "training_rows": 567,
+  "validation_rows": 132,
+  "test_rows": 134,
+  "test_year": 2023,
+  "validation_mae": {
+    "hist_gradient_boosting": 5.88,
+    "random_forest": 6.605
+  },
+  "validation_median_baseline_mae": 5.621,
+  "test_mae": 4.754,
+  "test_median_baseline_mae": 4.866,
+  "test_within_radius": 0.903,
+  "historical_median": 10.0,
+  "error_radius": 9,
+  "cpv_support": {
+    "4521": 316,
+    "4523": 311,
+    "4500": 73,
+    "4522": 43,
+    "4520": 25,
+    "4525": 23,
+    "4511": 22,
+    "4524": 21,
+    "4531": 20,
+    "4526": 12,
+    "4545": 7,
+    "4530": 5,
+    "4533": 4,
+    "4542": 2,
+    "4544": 2
+  },
+  "budget_bounds": [
+    30751.27,
+    554204701.36
+  ],
+  "duration_bounds": [
+    0.1,
+    360.0
+  ]
+}

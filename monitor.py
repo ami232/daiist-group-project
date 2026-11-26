@@ -89,7 +89,7 @@ def drift(reference: pd.DataFrame, current: pd.DataFrame) -> pd.DataFrame:
 
 def live_features(logs: pd.DataFrame) -> pd.DataFrame:
     """The features of the last WINDOW logged requests, without the `f_` prefix."""
-    columns = [c for c in logs.columns if c.startswith("f_")]
+    columns = [c for c in logs.columns if c == "f_outside_construction"]
     return logs[columns].tail(WINDOW).rename(columns=lambda c: c[2:])
 
 
@@ -131,7 +131,9 @@ def alerts(logs: pd.DataFrame, reference: pd.DataFrame | None) -> list[str]:
     window = logs.tail(WINDOW)
     if reference is not None and len(window) >= MIN_WINDOW:
         report = drift(reference, live_features(window))
-        for row in report[report["alert"]].itertuples():
+        eligible = live_features(window).count().ge(MIN_WINDOW)
+        triggered = report["alert"] & report["feature"].map(eligible).fillna(False)
+        for row in report.loc[triggered].itertuples():
             fired.append(f"Drift in `{row.feature}`: PSI {row.psi} > {row.threshold} over the last {len(window)} requests.")
     rated = window["feedback"].dropna().astype(float) if not window.empty else pd.Series(dtype=float)
     if len(rated) >= MIN_WINDOW and (rated < 0).mean() > THUMBS_DOWN_ALERT:

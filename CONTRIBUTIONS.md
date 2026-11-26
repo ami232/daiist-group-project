@@ -6,7 +6,7 @@
 
 | First name | GitHub username | Main areas |
 |---|---|---|
-| | | |
+| Jimena | Jnavarro-web | Project direction and Tender Desk interface |
 | | | |
 | | | |
 | | | |
@@ -18,4 +18,4 @@
 
 | Date | Who | What |
 |---|---|---|
-| | | |
+| 2026-11-24 | Jimena | Selected Spanish construction works as the project scope and directed the Tender Desk redesign with Codex assistance. |

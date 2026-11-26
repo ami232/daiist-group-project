@@ -1,3 +1,14 @@
+# Tender Desk
+
+An English Gradio app for Spanish public construction tenders. Open the
+[public Render app](https://construction-tender-desk.onrender.com/) and select
+**Load TED example** or paste a public excerpt with contact details removed.
+
+- [Evaluation instructions and drift replay](eval/README.md)
+- [30 candidate cases with TED sources](eval/case-plan.csv)
+- [Assignment report](REPORT.md)
+- [Local setup and retraining](SETUP.md#tender-desk-data)
+
 # Group assignment: Build and run an AI product
 
 As a team, build a small AI product for one business process, put it online, and run it like a product: it logs its own use, watches itself for drift, and you decide, with evidence, whether anyone should rely on it.
@@ -66,9 +77,9 @@ uv run python main.py drift-demo     # normal and shifted inputs; the alert must
 uv run python check.py               # checks that everything works, as the professor will
 ```
 
-There is no deploy command: once your fork is connected to Render (SETUP.md), every push to `main` puts the new version online.
+There is no deploy command: once your fork is connected to Render (SETUP.md), pushes to the branch selected in Render deploy automatically.
 
-The template works from day one with placeholder components (simple stand-ins that return fixed answers), so you can put it online straight away and replace the pieces one by one:
+Tender Desk uses the following course-template entry points:
 
 | File | What it does | Do you change it? |
 |---|---|---|

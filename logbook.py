@@ -5,8 +5,8 @@ and the grading rely on them. You may add your own.
 Where the logs go:
 
 - Online, on Render, DATABASE_URL points to your free Postgres database (render.yaml
-  sets it). Each request is a row of the table `requests` and each 👍/👎 a row of
-  `feedback`, with the whole record as JSON, so fields you add are kept too. The
+  sets it). Each request is a row of the table `tender_desk_requests` and each 👍/👎 a row of
+  `tender_desk_feedback`, with the whole record as JSON, so fields you add are kept too. The
   database survives restarts, sleeps and redeploys; the app's disk does not.
 - Everywhere else (your laptop, check.py, grading), or whenever LOG_DIR is set, logs
   are JSON-lines files in logs/, one per process.
@@ -41,6 +41,7 @@ REQUIRED_FIELDS = {
 }
 
 TABLES = ("requests", "feedback")
+DB_TABLES = {table: f"tender_desk_{table}" for table in TABLES}
 _run_id = uuid.uuid4().hex[:8]
 _lock = threading.Lock()
 
@@ -64,7 +65,7 @@ def _create_tables(url: str | None = None) -> None:
     with _connect(url) as conn:
         for table in TABLES:
             conn.execute(
-                f"CREATE TABLE IF NOT EXISTS {table} ("
+                f"CREATE TABLE IF NOT EXISTS {DB_TABLES[table]} ("
                 "  row_id bigserial PRIMARY KEY,"
                 "  id text NOT NULL,"
                 "  ts timestamptz NOT NULL,"
@@ -93,7 +94,7 @@ def _write(table: str, record: dict) -> None:
 
         with _connect() as conn:
             conn.execute(
-                f"INSERT INTO {table} (id, ts, record) VALUES (%s, %s, %s)",
+                f"INSERT INTO {DB_TABLES[table]} (id, ts, record) VALUES (%s, %s, %s)",
                 (record["id"], record["timestamp"], Jsonb(record)),
             )
         return
@@ -138,7 +139,7 @@ def log_feedback(request_id: str, value: int) -> None:
 def _read(table: str) -> list[dict]:
     if database_url():
         with _connect() as conn:
-            return [row[0] for row in conn.execute(f"SELECT record FROM {table} ORDER BY ts, row_id")]
+            return [row[0] for row in conn.execute(f"SELECT record FROM {DB_TABLES[table]} ORDER BY ts, row_id")]
     rows = []
     for path in sorted(LOG_DIR.rglob(f"{table}-*.jsonl")) if LOG_DIR.is_dir() else []:
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -173,8 +174,8 @@ def export(url: str) -> dict[str, int]:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     with _connect(url) as conn:
         for table in TABLES:
-            exists = conn.execute("SELECT to_regclass(%s)", (table,)).fetchone()[0]
-            rows = [r[0] for r in conn.execute(f"SELECT record FROM {table} ORDER BY ts, row_id")] if exists else []
+            exists = conn.execute("SELECT to_regclass(%s)", (DB_TABLES[table],)).fetchone()[0]
+            rows = [r[0] for r in conn.execute(f"SELECT record FROM {DB_TABLES[table]} ORDER BY ts, row_id")] if exists else []
             with (LOG_DIR / f"{table}-export.jsonl").open("w", encoding="utf-8") as f:
                 f.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
             counts[table] = len(rows)
