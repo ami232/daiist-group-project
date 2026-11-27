@@ -121,16 +121,274 @@ The seven criteria:
 
 ## Architecture
 
+### Component A — Machine Learning
+
+Component A estimates the probability of machine failure under the current operating conditions using a Gradient Boosting classifier with physics-informed features and sigmoid probability calibration.
+
+The component receives six machine readings through the `MachineInput` schema: product type, air temperature, process temperature, rotational speed, torque and tool wear. These are transformed into ten features using the same feature engineering pipeline during training and inference.
+
+The selected model was trained using scikit-learn with the following configuration:
+
+| Parameter | Value |
+|---|---|
+| Algorithm | Gradient Boosting Classifier |
+| Number of estimators | 100 |
+| Learning rate | 0.1 |
+| Maximum tree depth | 3 |
+| Random seed | 42 |
+| Calibration | Sigmoid, five-fold stratified cross-validation |
+| Decision threshold | 0.19 |
+| Model version | `maintai-gb-sigmoid-v1` |
+
+In addition to the overall failure classifier, four independent binary classifiers estimate the probabilities of tool wear failure (TWF), heat dissipation failure (HDF), power failure (PWF) and overstrain failure (OSF). Random failure (RNF) is excluded because it is unpredictable by design.
+
+The trained models are serialized using joblib and loaded on the first inference request. They are subsequently cached in memory to avoid repeated disk access and do not require retraining during application execution.
+
+The `component_a.assess()` function returns a structured `RiskAssessment` containing:
+
+- Calibrated probability of machine failure.
+- Risk classification and economic decision threshold.
+- Uncertainty-band indicator.
+- Estimated failure-mode probabilities, ranked from highest to lowest.
+- Physical indicators derived from machine readings.
+- Out-of-distribution (OOD) flags.
+- Model version.
+
+This structured assessment is passed to Component B, which uses the predicted risk, physical indicators and possible failure modes to generate an actionable maintenance recommendation supported by the business tools.
+
+The machine learning component applies concepts from the AI Design module, including supervised classification, feature engineering, model comparison, data leakage prevention and cost-sensitive decision thresholds. Model serialization, reproducibility and versioning also apply principles from the MLOps module.
+
 *The two components and how one feeds the other: a diagram plus a short walk-through of one request from input to output. Which models or APIs, and why those. What you reused from assignments 1–3, and whose it was.*
 
 ## Data
+
+### Component A — Dataset and preprocessing
+
+Component A uses the [AI4I 2020 Predictive Maintenance Dataset](https://archive.ics.uci.edu/dataset/601/ai4i), published by the UCI Machine Learning Repository under the Creative Commons Attribution 4.0 International license (CC BY 4.0). Dataset DOI: https://doi.org/10.24432/C5HS5C.
+
+The dataset contains 10,000 synthetic industrial observations and 14 columns, representing machine operating conditions and associated failure outcomes. It contains no personal data.
+
+#### Data quality
+
+| Metric | Result |
+|---|---:|
+| Total observations | 10,000 |
+| Missing values | 0 |
+| Duplicate rows | 0 |
+| Unique observation identifiers | 10,000 |
+| Machine failures | 339 |
+| Failure rate | 3.39% |
+| Non-failure observations | 9,661 |
+
+The dataset is highly imbalanced. A classifier that always predicts no failure would achieve 96.61% accuracy while detecting none of the actual failures. Consequently, accuracy alone is not considered an appropriate model selection metric.
+
+Data quality analysis identified 27 inconsistencies between the overall machine failure label and the individual failure-mode labels: 18 observations with a failure-mode flag but no overall failure and nine observations with an overall failure but no recorded failure mode. The original labels were preserved without modification.
+
+The UDI and Product ID columns were excluded from the input features because they are identifiers. The overall machine failure label and all five individual failure-mode labels were also excluded from the input features to prevent target leakage.
+
+#### Dataset splits
+
+A fixed stratified random 60/20/20 split was generated using random seed 42, stratifying by the overall machine failure target.
+
+| Split | Observations | Failures | Failure rate |
+|---|---:|---:|---:|
+| Training | 6,000 | 203 | 3.38% |
+| Validation | 2,000 | 68 | 3.40% |
+| Test | 2,000 | 68 | 3.40% |
+| Total | 10,000 | 339 | 3.39% |
+
+All five failure modes are represented in every split. Observation identifiers were checked to ensure that no observation appears in more than one subset.
+
+A chronological split was considered but not selected because all heat dissipation failures occur within the first 6,000 observations, leaving that failure mode absent from the chronological validation and test subsets.
+
+Stratified random sampling provides better representation of failure modes but may produce optimistic generalization estimates because of correlations between sequential observations. This limitation is acknowledged.
+
+The training set is used for model fitting and internal probability calibration. The validation set is used for model comparison, calibration-method selection and economic threshold optimization. The test set is reserved for final evaluation and was not used for any of these decisions.
+
+#### Feature engineering
+
+Two feature sets were compared: the six original machine readings and an expanded set containing four additional physics-informed features.
+
+| Engineered feature | Calculation | Purpose |
+|---|---|---|
+| Temperature difference | Process temperature − air temperature | Captures heat dissipation conditions |
+| Mechanical power | Torque × rotational speed × 2π / 60 | Captures power-related failure conditions |
+| Mechanical strain | Tool wear × torque | Captures the combined effect of wear and mechanical load |
+| Overstrain ratio | Mechanical strain / product-specific strain limit | Normalizes strain according to product type |
+
+The product-specific strain limits are 11,000 minNm for L, 12,000 minNm for M and 13,000 minNm for H, following the documented AI4I data-generation rules.
+
+These variables are calculated exclusively from observable machine readings, without using the failure labels.
+
+The preprocessing pipeline uses one-hot encoding for the categorical product type and standardization for numerical features. All fitted preprocessing transformations are learned from training data only.
+
+The same feature engineering functions are used during training and live inference to prevent training-serving skew.
+
+The original dataset, documentation and fixed splits are stored in `data/`, and the reproducible preparation and feature engineering scripts are stored in `training/`.
 
 *Where each component's data comes from, with links, licences and sizes. Confirm that there is no personal data in your inputs or logs.*
 
 ## Evaluation
 
 ### Components
+#### Component A — Machine learning evaluation
 
+**Evaluation status:** model selection and integrated validation completed. Final held-out test evaluation pending.
+
+##### Experiment 1 — Algorithm and feature comparison
+
+Three classification algorithms were evaluated using both raw and physics-informed features, resulting in six experiments. All models were fitted on the same training set of 6,000 observations and evaluated on the same validation set of 2,000 observations, including 68 failures.
+
+Logistic Regression was included as a simple ML baseline. Random Forest and Gradient Boosting were selected for their ability to capture nonlinear relationships and interactions between machine readings.
+
+The initial comparison used a conventional classification threshold of 0.5.
+
+| Model | Features | Precision | Recall | F1 | ROC-AUC | Average precision | Brier score |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Logistic Regression | Raw | 0.7273 | 0.2353 | 0.3556 | 0.8737 | 0.4321 | 0.0249 |
+| Logistic Regression | Engineered | 0.6800 | 0.2500 | 0.3656 | 0.8942 | 0.4614 | 0.0242 |
+| Random Forest | Raw | 0.8276 | 0.3529 | 0.4948 | 0.9633 | 0.7197 | 0.0174 |
+| Random Forest | Engineered | 0.9815 | 0.7794 | 0.8689 | 0.9799 | 0.8696 | 0.0085 |
+| Gradient Boosting | Raw | 0.8667 | 0.5735 | 0.6903 | 0.9618 | 0.7672 | 0.0137 |
+| Gradient Boosting | Engineered | 0.9643 | 0.7941 | 0.8710 | 0.9654 | 0.8830 | 0.0071 |
+
+Physics-informed feature engineering substantially improved the performance of both tree-based models. Random Forest recall increased from 35.29% to 77.94%, while Gradient Boosting recall increased from 57.35% to 79.41%.
+
+Gradient Boosting with engineered features achieved the highest average precision and F1-score and the lowest Brier score. Random Forest with engineered features achieved the highest ROC-AUC.
+
+Both models were retained for further calibration and economic evaluation. Average precision is reported as the summary measure of precision-recall performance because of the imbalanced target.
+
+Results are stored in `training/model_comparison.csv`.
+
+##### Experiment 2 — Probability calibration
+
+Reliable probability estimates are necessary because maintenance decisions depend on the predicted failure probability and the expected costs of alternative actions.
+
+Random Forest and Gradient Boosting were compared using three probability estimation methods: uncalibrated probabilities, sigmoid calibration and isotonic calibration.
+
+Calibration was performed using five-fold stratified cross-validation within the training set. The ensemble option was disabled to retain a single fitted base estimator per calibrated candidate, reducing deployment complexity.
+
+| Model | Calibration | ROC-AUC | Average precision | Brier score |
+|---|---|---:|---:|---:|
+| Gradient Boosting | Uncalibrated | 0.9654 | 0.8830 | 0.0071 |
+| Gradient Boosting | Sigmoid | 0.9654 | 0.8830 | 0.0071 |
+| Gradient Boosting | Isotonic | 0.9644 | 0.8519 | 0.0074 |
+| Random Forest | Uncalibrated | 0.9799 | 0.8696 | 0.0085 |
+| Random Forest | Sigmoid | 0.9799 | 0.8696 | 0.0076 |
+| Random Forest | Isotonic | 0.9776 | 0.8557 | 0.0075 |
+
+Calibration improved Random Forest's Brier score. Gradient Boosting already achieved a comparatively low Brier score, which remained unchanged to four decimal places after sigmoid calibration.
+
+Isotonic calibration reduced average precision for both models, potentially because its stepwise probability mapping introduces tied prediction scores.
+
+A low Brier score does not establish perfect calibration, particularly with rare outcomes. The calibration results should therefore be interpreted in the context of the synthetic dataset and limited number of positive observations.
+
+Results are stored in `training/calibration_comparison.csv`.
+
+##### Experiment 3 — Economic threshold optimization
+
+The conventional 0.5 classification threshold does not reflect the asymmetric economic consequences of missed failures and unnecessary interventions.
+
+Using the working economic assumptions defined in the business case, the simplified break-even probability is 0.09375. However, the threshold was selected empirically using the validation set, accounting for intervention costs, residual failure costs and human review costs.
+
+All six candidates from the calibration experiment were evaluated at thresholds from 0.01 to 0.98 in increments of 0.01, including the theoretical break-even probability of 0.09375.
+
+The optimization minimized expected cost per 1,000 processes subject to a minimum validation recall of 0.80.
+
+Human review was included whenever a prediction was critical, within the uncertainty band or outside the training ranges. LLM costs and additional agent-triggered reviews were excluded at this stage because the complete agent had not yet been evaluated.
+
+| Model | Threshold | Precision | Recall | Reviews | Cost per 1,000 |
+|---|---:|---:|---:|---:|---:|
+| Gradient Boosting — Uncalibrated | 0.18 | 0.9322 | 0.8088 | 68 | €57,360.00 |
+| Gradient Boosting — Sigmoid | 0.19 | 0.9322 | 0.8088 | 71 | €57,382.50 |
+| Random Forest — Isotonic | 0.09 | 0.9167 | 0.8088 | 51 | €57,382.50 |
+| Random Forest — Sigmoid | 0.11 | 0.9167 | 0.8088 | 56 | €57,420.00 |
+| Random Forest — Uncalibrated | 0.27 | 0.9167 | 0.8088 | 57 | €57,427.50 |
+| Gradient Boosting — Isotonic | 0.07 | 0.4091 | 0.9265 | 154 | €59,455.00 |
+
+Although the uncalibrated Gradient Boosting model achieved the lowest estimated cost, the sigmoid-calibrated version was selected because it maintained the same classification decisions at its optimized threshold while explicitly incorporating probability calibration.
+
+The additional cost was only €22.50 per 1,000 processes, arising from three additional human reviews across the 2,000 validation observations.
+
+The selected configuration is therefore Gradient Boosting with physics-informed features, sigmoid calibration and a decision threshold of 0.19.
+
+Results are stored in `training/threshold_comparison.csv` and `training/economic_comparison.csv`.
+
+##### Selected model — Integrated validation
+
+The trained model was serialized and integrated into `component_a.assess()`. The application-facing prediction function was then evaluated over all 2,000 validation observations to verify consistency between training and inference.
+
+| Actual / Predicted | No failure | Failure |
+|---|---:|---:|
+| No failure | 1,928 | 4 |
+| Failure | 13 | 55 |
+
+| Metric | Validation result |
+|---|---:|
+| Accuracy | 99.15% |
+| Precision | 93.22% |
+| Recall | 80.88% |
+| F1-score | 86.61% |
+| Average precision | 88.30% |
+| ROC-AUC | 96.54% |
+| Brier score | 0.007142 |
+| Recommended interventions | 59 |
+| Human reviews | 71 |
+| Human review rate | 3.55% |
+| Estimated cost per 1,000 processes | €57,382.50 |
+
+The integrated validation reproduced the classification metrics, review count and economic cost obtained during threshold optimization.
+
+The model met the minimum recall target of 80% on the validation set. Whether it also meets the held-out test recall requirement and outperforms the main baseline remains to be established through final evaluation.
+
+##### Experiment 4 — Failure-mode classification
+
+Four additional independent Gradient Boosting classifiers were trained to estimate individual failure-mode probabilities. Each uses 50 estimators, a learning rate of 0.1, maximum tree depth of 3, engineered features and five-fold sigmoid calibration.
+
+The classifiers were evaluated on the validation set using a threshold of 0.5.
+
+| Failure mode | Training positives | Validation positives | Precision | Recall | Average precision |
+|---|---:|---:|---:|---:|---:|
+| TWF | 27 | 12 | 0.0000 | 0.0000 | 0.0630 |
+| HDF | 67 | 22 | 1.0000 | 0.9091 | 0.9962 |
+| PWF | 64 | 16 | 1.0000 | 1.0000 | 1.0000 |
+| OSF | 57 | 21 | 1.0000 | 1.0000 | 1.0000 |
+
+Heat dissipation, power and overstrain classifiers performed strongly on validation because their labels are generated according to physical relationships captured by the engineered features.
+
+Perfect validation performance for power and overstrain does not establish equivalent performance in real industrial environments.
+
+Tool wear failure was considerably harder to predict. Despite a ROC-AUC of 0.8833, its average precision was only 0.0630 and it detected none of the 12 validation positives at the 0.5 threshold. This reflects the limited positive examples and stochastic nature of tool failure in the dataset.
+
+TWF probabilities are retained as advisory signals only and should not independently determine a maintenance action.
+
+RNF was excluded from individual classification because it occurs randomly by design.
+
+The failure-mode estimates are independent probabilities of their respective labels, not mutually exclusive diagnostic categories. They are not required to sum to one or to the overall machine failure probability.
+
+Results are stored in `training/failure_mode_comparison.csv`.
+
+##### Component A — Functional smoke tests
+
+Five manually constructed machine-reading scenarios were evaluated through the integrated `assess()` function.
+
+| Scenario | Failure probability | Risk band | Observed behaviour |
+|---|---:|---|---|
+| Normal operation | 0.17% | Low | Low estimated failure risk |
+| Heat dissipation risk | 90.80% | Critical | HDF ranked first at 97.33% |
+| Power failure risk | 97.45% | Critical | PWF ranked first at 98.48% |
+| Overstrain risk | 99.58% | Critical | Both PWF and OSF identified |
+| Out-of-distribution input | 0.14% | Low | Three out-of-range feature flags generated |
+
+All five smoke tests completed successfully.
+
+The out-of-distribution case demonstrates why probability estimates cannot be interpreted independently of data quality and operating conditions. Despite its low predicted failure probability, the observation must be routed to human review by the downstream guardrails.
+
+These smoke tests verify the behaviour of Component A only. They do not establish that the complete agent or application satisfies all safety requirements.
+
+##### Final held-out evaluation
+
+[Pending] The selected model, calibration method and threshold must be frozen before evaluating the 2,000 held-out test observations. The final results will be reported alongside the strongest economic baseline, confidence intervals and the predefined go/no-go criteria.
 *Each component on its own: the metric, the result, the test data and its size.*
 
 ### End to end
@@ -138,6 +396,29 @@ The seven criteria:
 *How you wrote `eval/cases.csv` (counts by kind, two examples). Results against the baseline. Where the output is free text: the judge's rubric and your agreement with it on your own labels.*
 
 ### Cost and latency
+**Component A — Resource requirements and provisional economic performance.**
+
+The machine learning component runs locally within the application and does not require external API calls or consume LLM tokens.
+
+The serialized production artifacts are approximately 40 KB for the overall failure classifier, 57 KB for the four failure-mode classifiers and 5.9 KB for the model card, with approximately 108 KB of total disk usage.
+
+The models are cached in memory after their initial load. The small serialized artifact sizes support lightweight deployment, although actual application memory consumption and inference latency must be measured independently.
+
+For model selection purposes, the validation cost was calculated using 55 true positives, four false positives, 13 false negatives and 71 human reviews.
+
+| Cost contribution | Total for 2,000 validation observations |
+|---|---:|
+| True positives: 55 × €1,100 | €60,500 |
+| False positives: 4 × €300 | €1,200 |
+| False negatives: 13 × €4,000 | €52,000 |
+| Human reviews: 71 × €15 | €1,065 |
+| Total estimated cost | €114,765 |
+
+This corresponds to an estimated cost of €57,382.50 per 1,000 processes, compared with €136,000 for the reactive no-intervention policy (B0). The provisional validation cost reduction is therefore 57.81%.
+
+These figures are used for model and threshold selection only. They exclude LLM costs and additional agent-triggered reviews, rely on assumed industrial costs and prevention effectiveness, and do not represent observed savings.
+
+The final economic comparison against the main baseline, plant-level extrapolations, sensitivity analysis and measured latency are reported separately following the coordinated test evaluation.
 
 *Per request: tokens, euros and seconds, for each component and in total. What it would cost per month at the volume in your business case.*
 
@@ -150,10 +431,64 @@ The seven criteria:
 **Records excluded from analysis.** The first deployment still used stub components. The 3 requests and 2 👍 logged on 25 Nov 2026 were smoke tests of the deployment (confirmed in the PostgreSQL export of 27 Nov 2026). They are not evidence for the evaluation or for the bandit's learning. They can be identified by their versions, which start with `stub-` (for example `component_a = stub-a-v0`), and every analysis and the bandit exclude records with stub versions.
 
 ## Failures
+### Component A — Failure analysis and limitations
 
+The machine learning experiments identified several limitations that affect the interpretation and potential deployment of MaintAI.
+
+| Issue | Observed evidence | Mitigation or next step |
+|---|---|---|
+| Missed machine failures | 13 of 68 validation failures were not detected at the selected threshold | Monitor false negatives, investigate missed cases and evaluate on real plant data |
+| Unnecessary interventions | Four false positives on validation | Use cost-sensitive threshold selection and human review |
+| Unreliable tool wear diagnosis | TWF recall and precision of zero at a 0.5 threshold | Treat TWF predictions as advisory signals and consider physical wear indicators |
+| Out-of-distribution predictions | A smoke-test case produced a low failure probability despite three out-of-range features | Require human review independently of the predicted probability |
+| Inconsistent ground-truth labels | 27 discrepancies between overall failure and individual failure-mode labels | Preserve original labels and document their limitations |
+| Synthetic failure rules | Perfect validation results for PWF and OSF | Avoid extrapolating synthetic-data performance to real machinery |
+| Potential sequential correlations | Stratified random splitting of sequentially generated observations | Conduct chronological or independent real-data robustness evaluation |
+| Limited evidence of calibration | Small number of positive observations | Assess reliability using larger, independent datasets |
+
+The model estimates failure risk under current operating conditions. It does not predict remaining useful life, the exact timing of a future breakdown or the causal effect of maintenance interventions.
+
+The economic evaluation assumes an 80% prevention effectiveness. This is a business assumption rather than an effect learned from the dataset, which contains no observed maintenance intervention outcomes.
+
+Before real-world deployment, the main priority would be validation using historical and prospective industrial data, including actual failures, maintenance actions and resulting outcomes.
+
+End-to-end failure analysis, including agent and hand-off failures, is reported separately.
 *Failed end-to-end cases grouped by cause (which component, or the hand-off between them), with counts, and what you would fix first.*
 
 ## Decision
+### Component A — Decision policy
+
+The selected machine learning decision threshold is 0.19. Preventive intervention is recommended by the ML threshold policy when the estimated probability of failure is greater than or equal to 0.19.
+
+The component assigns risk categories using the following fixed boundaries:
+
+| Risk band | Failure probability |
+|---|---|
+| Low | p < 0.19 |
+| Medium | 0.19 ≤ p < 0.30 |
+| High | 0.30 ≤ p < 0.80 |
+| Critical | p ≥ 0.80 |
+
+The uncertainty band is defined as:
+
+`threshold / 2 ≤ p < 2 × threshold`
+
+At the selected threshold, this corresponds to probabilities between 0.095 (inclusive) and 0.38 (exclusive).
+
+Component A exposes the information necessary for the downstream guardrails to require human review whenever at least one of the following conditions is met:
+
+- Critical failure risk: p ≥ 0.80.
+- Prediction within the uncertainty band: 0.095 ≤ p < 0.38.
+- One or more out-of-distribution feature flags.
+
+Out-of-distribution flags are generated when numerical raw or engineered features fall outside their observed training minimum and maximum values. These checks identify range violations but cannot detect every possible distribution shift.
+
+The ML-triggered review policy identified 71 of the 2,000 validation observations for human review, representing 3.55% of the validation sample. Final daily review estimates will be calculated using the held-out test set.
+
+The agent may introduce additional review requirements. Human review is therefore not determined solely by the ML risk category, and a low predicted probability does not guarantee safe operating conditions.
+
+The selected configuration is suitable for integration and further evaluation as a university prototype. The final go/no-go decision remains subject to the predefined economic, technical, operational and safety criteria, including comparison with the strongest baseline and final held-out evaluation.
+
 
 *Which cases go to a person: the rule, and how many cases a day that would be. Go / no-go / go with conditions: the conditions, and the evidence behind them.*
 
@@ -197,7 +532,35 @@ Each request logs the style, the selection probabilities and the policy version.
 3. Persistence of the new fields on PostgreSQL, and the evidence export.
 
 ## How to run it
+### Reproducing Component A
 
+The trained production models are stored in `models/`. No external model download, API key or retraining is required for Component A inference.
+
+To reproduce the machine learning experiments from the original dataset, run the following commands from the repository root:
+
+```bash
+uv sync
+uv run python training/prepare_data.py
+uv run python -m training.train
+uv run python -m training.calibrate
+uv run python -m training.optimize_threshold
+uv run python -m training.train_failure_modes
+uv run python -m training.export_model
+```
+
+The calibration script generates the temporary candidate model collection required for threshold optimization and model export.
+
+The final production artifacts are:
+
+- `models/failure_model.joblib`
+- `models/failure_modes.joblib`
+- `models/model_card.json`
+
+The model card records the dataset hash, scikit-learn version, model configuration, calibration method, decision threshold, training feature ranges, validation metrics and known limitations.
+
+The public inference interface is `maintai.component_a.assess()`, which accepts a `MachineInput` and returns a `RiskAssessment`.
+
+All model selection scripts use the training and validation datasets only. The held-out test dataset is reserved for the final evaluation.
 *Anything beyond SETUP.md that the professor needs to run it: which keys, any download step, how long the first run takes.*
 
 ## AI use
