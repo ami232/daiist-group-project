@@ -1,0 +1,10 @@
+{
+  "_label": "SIMULATED DATA. Invented plant calendar. Not connected to any real planning system.",
+  "reference_datetime": "2026-12-01T08:00",
+  "horizon_hours": {"now": 8, "shift": 24, "planned": 168},
+  "windows": [
+    {"window_id": "W-2026-12-01-A", "start": "2026-12-01T14:00", "duration_h": 1.0},
+    {"window_id": "W-2026-12-02-A", "start": "2026-12-02T06:00", "duration_h": 2.0},
+    {"window_id": "W-2026-12-04-B", "start": "2026-12-04T22:00", "duration_h": 4.0}
+  ]
+}
