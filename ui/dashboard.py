@@ -55,12 +55,43 @@ def _kpi(icon_name: str, label: str, value: str, foot: str, tone: str = "") -> s
             f'<span class="mai-kpi__foot">{_e(foot)}</span></div>')
 
 
+NA = "N/A"  # shown when a metric is missing or cannot be computed: never a false zero
+
+
+def _summary(logs: pd.DataFrame) -> dict:
+    """monitor.summary() as {metric: value}. Empty if it fails or changes shape (WP5 owns it)."""
+    try:
+        table = monitor.summary(logs)
+        return dict(zip(table["metric"], table["value"]))
+    except Exception:  # noqa: BLE001 - the dashboard shows N/A instead of failing
+        return {}
+
+
+def _number(summary: dict, key: str) -> float | None:
+    """A numeric metric, or None if it is absent, "-", empty or not a finite number."""
+    value = summary.get(key)
+    if value is None:
+        return None
+    try:
+        number = float(str(value).strip().rstrip("%")) / (100 if str(value).strip().endswith("%") else 1)
+    except ValueError:
+        return None
+    return number if pd.notna(number) and abs(number) != float("inf") else None
+
+
+def _share_text(summary: dict, key: str) -> str:
+    number = _number(summary, key)
+    return NA if number is None else f"{number:.0%}"
+
+
 def _latency_text(value) -> str:
     """monitor.summary() rounds to 0.01 s; below that, say so instead of showing 0."""
     try:
         v = float(value)
     except (TypeError, ValueError):
-        return "–"
+        return NA
+    if pd.isna(v):
+        return NA
     return "< 0.01 s" if v == 0 else (f"{v * 1000:.0f} ms" if v < 1 else f"{v:.2f} s")
 
 
@@ -81,11 +112,12 @@ def render(logs: pd.DataFrame, reference: pd.DataFrame | None, storage: str) -> 
   {_rl(logs)}
 </div>"""
 
-    summary = dict(zip(monitor.summary(logs)["metric"], monitor.summary(logs)["value"]))
+    summary = _summary(logs)
     n = len(logs)
     stub_n = int(logs["versions"].apply(_is_stub).sum()) if "versions" in logs else 0
     oos_n = int((logs.get("status", pd.Series(dtype=str)) == "out_of_scope").sum())
-    rated = int(float(summary.get("rated 👍/👎", 0) or 0))
+    rated_n = _number(summary, "rated 👍/👎")
+    rated = int(rated_n) if rated_n is not None else None
 
     provisional = ""
     if stub_n:
@@ -93,15 +125,18 @@ def render(logs: pd.DataFrame, reference: pd.DataFrame | None, storage: str) -> 
                        f'{stub_n} of {n} logged requests come from stub components (development and smoke tests). They are '
                        f'shown here for monitoring but excluded from the evaluation and from the bandit.</div></div>')
 
-    neg = summary.get("share 👎 (of rated)", "-")
+    neg = _number(summary, "share 👎 (of rated)")  # None when nothing is rated ("-") or the metric is missing
+    mean_cost, total_cost = _number(summary, "mean cost per request (€)"), _number(summary, "total cost (€)")
+    latency = _number(summary, "median latency (s)")
     kpis = "".join([
         _kpi("requests", "Requests", f"{n:,}", f"{oos_n} out of scope"),
-        _kpi("user-check", "Sent to review", summary.get("sent to review", "-"), "Share of all requests"),
-        _kpi("thumb-down", "Negative feedback", neg if rated else "–", f"{rated} rated request(s)",
-             "warning" if rated and neg not in ("-", "0%") else ""),
-        _kpi("clock", "Median latency", _latency_text(summary.get("median latency (s)")), "Per request, end to end"),
-        _kpi("coins", "AI cost / request", f'€{float(summary.get("mean cost per request (€)", 0)):.4f}',
-             f'Total €{float(summary.get("total cost (€)", 0)):.4f} · production-equivalent'),
+        _kpi("user-check", "Sent to review", _share_text(summary, "sent to review"), "Share of all requests"),
+        _kpi("thumb-down", "Negative feedback", NA if neg is None else f"{neg:.0%}",
+             "No ratings yet" if rated == 0 else ("Not available" if rated is None else f"{rated} rated request(s)"),
+             "warning" if neg else ""),
+        _kpi("clock", "Median latency", NA if latency is None else _latency_text(latency), "Per request, end to end"),
+        _kpi("coins", "AI cost / request", NA if mean_cost is None else f"€{mean_cost:.4f}",
+             ("Total not available" if total_cost is None else f"Total €{total_cost:.4f}") + " · production-equivalent"),
     ])
 
     return f"""
@@ -194,13 +229,13 @@ def _drift_panel(logs: pd.DataFrame, reference: pd.DataFrame | None) -> str:
 
 def _latency_chart(logs: pd.DataFrame, summary: dict) -> str:
     recent = logs.tail(50)
-    lat = [float(v) for v in recent["latency_s"].fillna(0)]
-    if len(lat) < 2:
+    lat = [None if pd.isna(v) else float(v) for v in pd.to_numeric(recent["latency_s"], errors="coerce")]
+    if sum(v is not None for v in lat) < 2:  # missing latencies are gaps, not zeros
         return _empty("clock", "Not enough requests", "Latency is drawn once two or more requests are logged.")
-    median = float(summary.get("median latency (s)", 0) or 0)
+    median = _number(summary, "median latency (s)")
     labels = [t.strftime("%H:%M") for t in recent["timestamp"]]
-    return charts.line_chart({"Latency": lat}, labels, y_fmt=_seconds,
-                             reference=(median, f"Median {_latency_text(median)} (all requests)"), title="Latency per request")
+    reference = None if median is None else (median, f"Median {_latency_text(median)} (all requests)")
+    return charts.line_chart({"Latency": lat}, labels, y_fmt=_seconds, reference=reference, title="Latency per request")
 
 
 def _seconds(v: float) -> str:

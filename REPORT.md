@@ -226,11 +226,15 @@ The seven criteria:
 - **Wrong prior.** It roughly doubles the early regret but is corrected by the data.
 - **No false winner.** With three equally good styles (50% each), no style dominates: final selection probabilities are 38% / 29% / 33% with the neutral prior.
 - **Limits of the simulation.** Users are independent coin flips with fixed rates. Real ratings are fewer, noisier, correlated within a session, and may change over time.
+- **Calibration of the 95% intervals** [Simulated] (`eval/bandit_calibration.py`, 200 runs per scenario). With rates drawn from the prior, coverage is 95–96%, which checks the implementation. Adaptive sampling bends it: the best style is under-covered while it is being found (about 90% at 25–100 ratings), and a style starved after early bad luck can be badly under-covered (31% of 29 intervals and 0% of 16 with equal styles: small samples, kept in the results). The dashboard intervals are a guide, not a guarantee.
 
 **Risks.**
 - **Reward hacking.** The policy optimises what raters like, not what is correct. A style could win by sounding confident or being short. Mitigations: the safety rules and costs never come from the arm; the arm does not change the risk or the review rules; order quality is judged separately (evaluation and judge).
 - **Feedback bias.** Raters will mostly be the team and classmates, not technicians, and early ratings come from demo scenarios. Ratings are blind to the style, but the learned preference only shows that the loop works, not what technicians would prefer.
-- **Delayed and missing rewards.** A rating can arrive minutes later, change, or never arrive. Unrated requests do not count; a changed rating replaces the earlier one; the policy history replays ratings in the order they were given, without future information.
+- **Delayed and missing rewards.** A rating can arrive later, change, or never arrive. Unrated requests do not count; a changed rating replaces the earlier one; the history replays ratings in the order given. The dashboard measures the response rate and the reward delay (median and p95).
+- **Feedback loop.** The policy decides which style collects evidence, so a style with early bad luck is served less. Thompson sampling keeps serving it with its selection probability; we log those probabilities and show an exploratory propensity-weighted (IPS) estimate beside the observed reward. It is not causal and does not correct non-response.
+- **Non-response.** Only rated orders teach the policy. The dashboard compares response rates by risk band, decision and style, and flags gaps of 20 points or more.
+- **Abuse.** Feedback needs no login, so check.py keeps working. A random, temporary, pseudonymous session tag (no personal data) caps each session at 15 counted ratings and 3 clicks per order. It is not an identity: a new page is a new session.
 
 **Persistence and versioning.**
 - There is no state file: the posterior is rebuilt from the logs (PostgreSQL on Render) on every request, so it survives restarts and redeploys.
@@ -238,26 +242,14 @@ The seven criteria:
 - Only eligible ratings count: real traffic, handled, not degraded, no `stub` version, the current prompt version and a compatible policy version. A new prompt version starts a new policy.
 - If the logs cannot be read, the request is served from the prior alone and the record says so (`bandit_policy_from = "prior_only"`).
 
-**Tests** [Measured]. 23/23 pass (`uv run python tests/test_bandit.py`), also on a clean `uv sync --frozen --no-dev` install. They cover:
-- α/β updates and the neutral prior;
-- selection probabilities summing to 1;
-- exploration;
-- convergence, correction of a wrong prior and no false winner;
-- exclusion of 12 kinds of invalid record;
-- duplicate and changed ratings;
-- policy history without future information;
-- persistence across a process restart;
-- fallback when the logs fail;
-- offline reproducibility;
-- an adversarial agent;
-- the dashboard with and without eligible feedback.
+**Tests** [Measured]. 41/41 pass (`uv run python tests/test_bandit.py`): updates, exclusions, duplicate and changed ratings, history without future information, restarts, log failures, session limits, reward delay, missing data, evidence export, simulation isolation, `/run` compatibility and a performance budget (list in `docs/WP6_BANDIT.md`).
 
-**Latency and memory** [Measured locally]. Choosing an arm takes about 3–6 ms with up to 2,000 logged requests and 22 ms with 10,000. A request served end to end with the stubs takes 4 ms. Peak memory is 161 MB after serving, and 227 MB after the first Monitoring refresh, which imports scipy for the Beta curves; scipy is never loaded inside `/run`. [Pending] Measurement on Render (512 MB, 0.15 CPU) with the real models.
+**Latency and memory** [Measured locally]. Choosing an arm takes 3–6 ms with up to 2,000 logged requests and about 60 ms with 5,000. A request served end to end with the stubs takes 4–7 ms. Peak memory is about 156 MB after serving and 205–210 MB after the first Monitoring refresh, which imports scipy (about 2 s); scipy is never loaded inside `/run`. `/run` serves two requests at a time from a bounded queue. [Pending] Measurement on Render (512 MB, 0.15 CPU) with the real models.
 
 **Pending and limitations.**
 - [Pending] **Safety with the real agent (WP3).** Today the action, priority and the agent's own review request come from the LLM draft, so a real LLM could change them with the style. A test with an adversarial agent records this gap. The fix belongs to WP3: decide those fields without the arm, use the arm only to write the text, and have the guardrails reject any difference (`docs/WP6_BANDIT.md`).
 - [Pending] **Real feedback campaign** and validation of persistence on PostgreSQL. Persistence is tested locally with log files, which use the same `logbook.load()`.
-- [Pending] **Real-feedback evidence for this report**: policy snapshots before and after the real feedback and the exported ratings.
+- [Pending] **Real-feedback evidence for this report**: `eval/export_rl_evidence.py` exports it (aggregates only), once real ratings exist.
 
 ## How to run it
 

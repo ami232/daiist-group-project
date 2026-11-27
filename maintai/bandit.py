@@ -20,7 +20,8 @@ Manuela on 2026-11-26):
      pseudo-observations per arm) was studied in eval/simulate_bandit.py and is
      NOT used live; load_prior(path) can still read one for experiments.
    - Real feedback: eligible_feedback(logs). Reward 1 for a thumbs-up, 0 for a
-     thumbs-down. A request without a rating does not count.
+     thumbs-down. A request without a rating does not count. At most
+     MAX_RATINGS_PER_SESSION rated requests per random session tag count.
 2. Selection (Thompson sampling): one sample from each posterior; the highest wins.
 3. Logging (app.serve): arm, arm_probs (Monte Carlo probability that each arm is
    chosen, summing to 1), bandit_explore (see is_exploration), bandit_policy_from
@@ -49,8 +50,14 @@ MAX_PRIOR_PSEUDO = 10  # cap for any simulated prior (decision D6)
 MC_SAMPLES = 4000  # draws used to estimate the probability that each arm is chosen
 CI_LEVEL = 0.95
 SNAPSHOT_SEED = 0  # fixed, so the dashboard shows the same probabilities on every refresh
+# Abuse limit (decided by Manuela, 2026-11-26): at most this many rated requests per
+# browser session train the policy, the first ones by request time. A session is a
+# random, temporary tag (maintai/feedback_guard.py), NOT an identity: a new page load
+# is a new session, so this bounds casual abuse, it does not prove who rated.
+MAX_RATINGS_PER_SESSION = 15
 
 FEEDBACK_COLUMNS = ["id", "timestamp", "arm", "reward"]
+EVENT_COLUMNS = ["id", "timestamp", "feedback"]
 
 
 # --- Prior ---------------------------------------------------------------------
@@ -131,8 +138,26 @@ def eligible_requests(logs: pd.DataFrame | None, prompt_version: str | None = No
     return df[keep]
 
 
-def eligible_feedback(logs: pd.DataFrame | None, prompt_version: str | None = None) -> pd.DataFrame:
-    """The ratings the policy learns from: one row per request (the latest rating), reward 1 or 0."""
+def apply_session_cap(df: pd.DataFrame, cap: int = MAX_RATINGS_PER_SESSION) -> pd.DataFrame:
+    """Keep at most `cap` rated requests per session tag: the first ones by request time.
+
+    `df` has one row per rated request with `timestamp` (request time) and, when
+    logged, `session_tag`. Rows without a tag (records logged before the tag existed,
+    or requests served outside the UI, e.g. check.py) are not capped.
+    """
+    if df.empty or "session_tag" not in df:
+        return df
+    tag = df["session_tag"]
+    tagged = tag.notna() & (tag.astype(str).str.len() > 0)
+    ordered = df[tagged].sort_values("timestamp", kind="stable")
+    rank = ordered.groupby("session_tag", sort=False).cumcount()
+    keep = pd.Series(True, index=df.index)
+    keep.loc[rank.index] = rank < cap
+    return df[keep]
+
+
+def _rated(logs: pd.DataFrame | None, prompt_version: str | None = None) -> pd.DataFrame:
+    """Eligible requests with a valid rating (latest per request), before the session cap."""
     if logs is None or logs.empty or "feedback" not in logs:
         return pd.DataFrame(columns=FEEDBACK_COLUMNS)
     df = eligible_requests(logs, prompt_version)
@@ -141,7 +166,15 @@ def eligible_feedback(logs: pd.DataFrame | None, prompt_version: str | None = No
     if df.empty:
         return pd.DataFrame(columns=FEEDBACK_COLUMNS)
     df = df.assign(reward=(pd.to_numeric(df["feedback"]) > 0).astype(int))
-    df = df.sort_values("timestamp").drop_duplicates("id", keep="last")  # logbook.load() already keeps one row per id
+    return df.sort_values("timestamp").drop_duplicates("id", keep="last")  # logbook.load() already keeps one row per id
+
+
+def eligible_feedback(logs: pd.DataFrame | None, prompt_version: str | None = None) -> pd.DataFrame:
+    """The ratings the policy learns from: one row per request (the latest rating), reward 1 or 0,
+    at most MAX_RATINGS_PER_SESSION per session tag."""
+    df = apply_session_cap(_rated(logs, prompt_version))
+    if df.empty:
+        return pd.DataFrame(columns=FEEDBACK_COLUMNS)
     return df[FEEDBACK_COLUMNS].reset_index(drop=True)
 
 
@@ -149,17 +182,38 @@ def load_feedback_events() -> pd.DataFrame:
     """Every rating event with its own timestamp (id, timestamp, feedback), oldest first.
 
     logbook.load() keeps only the latest rating per request and drops when it was
-    given; policy_history() needs the events to replay the policy without using
-    future information. Reads through logbook's own reader (files or Postgres).
-    """
-    import logbook
+    given; policy_history() and the reward-delay metric need the events themselves.
 
-    rows = logbook._read("feedback")  # read-only use of the fixed template module
+    INTERNAL DEPENDENCY: this reads `logbook._read("feedback")`, a private helper of
+    the fixed template module (files or Postgres, whichever logbook uses). It is
+    read-only and guarded: if the helper disappears, raises (database unreachable)
+    or returns malformed rows, the result is an empty or partial frame and
+    `result.attrs["error"]` says why. Callers then show "not available" instead of
+    failing. Nothing on the request path (/run) calls this function.
+    """
+    empty = pd.DataFrame(columns=EVENT_COLUMNS)
+    try:
+        import logbook
+
+        reader = getattr(logbook, "_read", None)
+        if not callable(reader):
+            empty.attrs["error"] = "logbook._read is not available in this version of logbook.py"
+            return empty
+        rows = reader("feedback")
+    except Exception as error:  # noqa: BLE001 - the dashboard must not fail because of the logs
+        empty.attrs["error"] = f"feedback events unreadable ({type(error).__name__})"
+        return empty
+    rows = [r for r in (rows or []) if isinstance(r, dict) and all(k in r for k in EVENT_COLUMNS)]
     if not rows:
-        return pd.DataFrame(columns=["id", "timestamp", "feedback"])
-    events = pd.DataFrame(rows)
-    events["timestamp"] = pd.to_datetime(events["timestamp"], utc=True, format="ISO8601")
-    return events[["id", "timestamp", "feedback"]].sort_values("timestamp").reset_index(drop=True)
+        return empty
+    events = pd.DataFrame(rows)[EVENT_COLUMNS]
+    events["timestamp"] = pd.to_datetime(events["timestamp"], utc=True, format="ISO8601", errors="coerce")
+    events["feedback"] = pd.to_numeric(events["feedback"], errors="coerce")
+    bad = events["timestamp"].isna() | events["feedback"].isna()
+    events = events[~bad].sort_values("timestamp", kind="stable").reset_index(drop=True)
+    if bad.any():
+        events.attrs["error"] = f"{int(bad.sum())} malformed feedback event(s) skipped"
+    return events
 
 
 # --- Posterior and choice ----------------------------------------------------------
@@ -296,7 +350,8 @@ def policy_history(logs: pd.DataFrame | None = None, events: pd.DataFrame | None
 
     `events` are rating events (id, timestamp, feedback), e.g. load_feedback_events().
     At each event time only the ratings given up to that moment count, and a changed
-    rating replaces the earlier one for that request (never adds a second reward).
+    rating replaces the earlier one for that request (never adds a second reward), and
+    the session cap is applied with what was known at that moment.
     Up to `points` evenly spaced snapshots, starting from the prior alone (step 0).
     Columns: step (number of rating events so far), timestamp, n_feedback, plus the
     policy_snapshot columns.
@@ -308,6 +363,8 @@ def policy_history(logs: pd.DataFrame | None = None, events: pd.DataFrame | None
         snap = snapshot_from_posterior(posterior_from_counts({}, {}, prior))
         return pd.concat([empty, snap.assign(step=0, timestamp=pd.NaT, n_feedback=0)], ignore_index=True)
     arm_of = dict(zip(requests["id"], requests["arm"]))
+    sent_at = dict(zip(requests["id"], requests["timestamp"]))
+    tag_of = dict(zip(requests["id"], requests["session_tag"])) if "session_tag" in requests else {}
     ev = events[events["id"].isin(arm_of) & pd.to_numeric(events["feedback"], errors="coerce").isin([1, -1])]
     ev = ev.sort_values("timestamp").reset_index(drop=True)
     marks = set(np.linspace(0, len(ev), min(points, len(ev)) + 1).round().astype(int))
@@ -318,10 +375,12 @@ def policy_history(logs: pd.DataFrame | None = None, events: pd.DataFrame | None
             row = ev.iloc[k - 1]
             latest[row["id"]] = int(int(row["feedback"]) > 0)
         if k in marks:
-            fb = pd.DataFrame({"arm": [arm_of[i] for i in latest], "reward": list(latest.values())})
+            fb = pd.DataFrame({"id": list(latest), "arm": [arm_of[i] for i in latest], "reward": list(latest.values()),
+                               "timestamp": [sent_at[i] for i in latest], "session_tag": [tag_of.get(i) for i in latest]})
+            fb = apply_session_cap(fb)  # the same rule as eligible_feedback(), with what was known at step k
             snap = snapshot_from_posterior(posterior_from_counts(*_counts(fb) if len(fb) else ({}, {}), prior))
             snap.insert(0, "step", k)
             snap.insert(1, "timestamp", ev["timestamp"].iloc[k - 1] if k else pd.NaT)
-            snap.insert(2, "n_feedback", len(latest))
+            snap.insert(2, "n_feedback", len(fb))
             frames.append(snap)
     return pd.concat(frames, ignore_index=True)

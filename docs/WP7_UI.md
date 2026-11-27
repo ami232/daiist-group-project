@@ -39,6 +39,17 @@ Owner: Manuela. Status: initial implementation done against the stub components.
   - An empty state for every section when there is not enough data.
   - A "Provisional data" banner that counts the stub records.
 
+## Hardening (2026-11-26)
+
+- **No false zeros in Monitoring.** The KPIs read `monitor.summary()` (WP5) defensively. A metric that is missing, renamed, "-" or not a number is shown as **N/A**, never as 0 or €0.0000. If `summary()` raises, every KPI shows N/A and the page still renders. A real zero (for example €0 cost with stub components) is still shown as 0. A missing latency is a gap in the chart, not a zero.
+- **Concurrency.** `demo.queue(max_size=16, default_concurrency_limit=1)`, so `/run` handles 2 requests at a time (Render free: 0.15 CPU, 512 MB; requests mostly wait for Gemini once WP3 is live). Feedback handles 2 and Monitoring refresh 1. Both values can be set through `MAINTAI_RUN_CONCURRENCY` / `MAINTAI_QUEUE_MAX_SIZE`. When the queue is full, Gradio refuses the request instead of piling it up.
+- **Feedback limits.** Per session: 3 clicks per order and 60 per session; further clicks show a message (`maintai/feedback_guard.py`, see `docs/WP6_BANDIT.md`).
+- **Compatibility checked.**
+  - `get_api_info()` lists only `/run`, with the single parameter `raw_input`. `gr.Request` is injected and is not an API input.
+  - check.py step 3 (`serve(raw_input)`) passes, and so does step 6 against a local server.
+  - Six parallel `gradio_client` calls succeed.
+- **Adaptive Intelligence.** A data-label legend (Real logs, Simulated, Assumption, Pending), new KPIs (response rate, reward delay, sessions, changed or very fast ratings) and new cards: served probabilities, coverage by style, observed reward vs belief vs selection, feedback loop and non-response. The simulation section adds interval calibration. New CSS: `.mai-provenance`, `.mai-num--warn`.
+
 ## Tests (local, stub components, no Gemini calls)
 
 - The app starts. Through `gradio_client`, the only public endpoint is `/run`. It returns a result for a critical reading and refuses non-JSON input as out of scope.

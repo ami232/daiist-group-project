@@ -154,9 +154,35 @@ def test_invalid_records_are_excluded():
     assert list(fb["id"]) == ["r1"], list(fb["id"])
 
 
-def test_current_stub_prompt_version_means_no_eligible_feedback():
-    rows = [rec(1, "cost", 1)]
-    assert bandit.eligible_feedback(logs_from(rows)).empty  # current agent is a stub: nothing counts yet
+def test_eligibility_follows_the_current_prompt_version_whatever_it_is():
+    """Version-independent: works with today's stub agent and with WP3's real agent."""
+    current = bandit.current_prompt_version()
+    mine = {"component_a": "a-v1", "component_b": f"gemini|{current}", "bandit": "ts-v1"}
+    rows = [rec(1, "cost", 1, versions=mine), rec(2, "cost", 1)]  # r2 is written with PV = "agent-v1"
+    fb = bandit.eligible_feedback(logs_from(rows))
+    if current.startswith("stub"):
+        assert fb.empty  # a stub agent never trains the policy
+    else:
+        assert "r1" in set(fb["id"])  # the real agent's own records count
+        assert ("r2" in set(fb["id"])) == (current == PV)  # other prompt versions never do
+
+
+def test_future_agent_version_is_supported():
+    """Simulates WP3 publishing a real agent: only the new version's real ratings count."""
+    from maintai import agent
+
+    original = agent.PROMPT_VERSION
+    agent.PROMPT_VERSION = "agent-v7"
+    try:
+        v7 = {"component_a": "a-v1", "component_b": "gemini-x|agent-v7", "bandit": "ts-v1"}
+        rows = [rec(1, "cost", 1, versions=v7), rec(2, "root_cause", -1, versions=v7),
+                rec(3, "cost", 1),  # previous prompt version (agent-v1): excluded
+                rec(4, "cost", 1, versions={**v7, "component_a": "stub-a-v0"})]  # stub model: excluded
+        assert bandit.current_prompt_version() == "agent-v7"
+        assert sorted(bandit.eligible_feedback(logs_from(rows))["id"]) == ["r1", "r2"]
+        assert bandit.decide(logs_from(rows), seed=1).n_feedback == 2
+    finally:
+        agent.PROMPT_VERSION = original
 
 
 def test_prompt_version_change_resets_policy():
@@ -355,6 +381,346 @@ def test_dashboard_with_synthetic_eligible_feedback():
     assert "No real learning curve yet" in page  # synthetic rows here have no feedback events file: history stays empty
     assert "<polyline" in page  # Beta density curves are drawn
 
+
+
+# --- Hardening (WP6/WP7): sessions, missing data, events, metrics ------------------------------
+
+def _tagged(i, arm, fb, tag, minute=None):
+    return {**rec(i, arm, fb, minute=minute or i), "session_tag": tag}
+
+
+def test_session_cap_keeps_first_ratings_per_session():
+    cap = bandit.MAX_RATINGS_PER_SESSION
+    rows = [_tagged(i, "cost", 1, "spam") for i in range(cap + 10)]  # one session floods with positives
+    rows += [_tagged(100 + i, "checklist", -1, f"user{i}") for i in range(3)]
+    rows += [rec(200, "root_cause", 1)]  # untagged (served outside the UI): not capped
+    fb = bandit.eligible_feedback(logs_from(rows), prompt_version=PV)
+    assert (fb["arm"] == "cost").sum() == cap  # the flood is cut at the cap...
+    kept = set(fb[fb["arm"] == "cost"]["id"])
+    assert kept == {f"r{i}" for i in range(cap)}  # ...keeping the first ones by request time
+    assert (fb["arm"] == "checklist").sum() == 3 and (fb["arm"] == "root_cause").sum() == 1
+    s = __import__("maintai.rl_monitor", fromlist=["x"]).sessions(logs_from(rows), PV)
+    assert s["n_over_cap"] == 10 and s["n_sessions"] == 4 and s["n_untagged"] == 1 and s["max_per_session"] == cap + 10
+
+
+def test_history_applies_the_same_session_cap_and_ends_at_live_policy():
+    cap = bandit.MAX_RATINGS_PER_SESSION
+    rows = [_tagged(i, "cost", 1, "spam") for i in range(cap + 5)] + [_tagged(50, "checklist", 1, "other")]
+    t = pd.Timestamp("2026-11-28 12:00", tz="UTC")
+    events = pd.DataFrame([{"id": r["id"], "timestamp": t + pd.Timedelta(seconds=k), "feedback": r["feedback"]}
+                           for k, r in enumerate(rows)])
+    hist = bandit.policy_history(logs_from(rows), events, prior=UNIFORM, prompt_version=PV, points=100)
+    last = hist[hist["step"] == hist["step"].max()].set_index("arm")
+    live = bandit.policy_snapshot(logs_from(rows), prior=UNIFORM, prompt_version=PV).set_index("arm")
+    assert (last["alpha"] == live["alpha"]).all() and (last["beta"] == live["beta"]).all()
+    assert last.loc["cost", "successes"] == cap and int(last["n_feedback"].iloc[0]) == cap + 1
+
+
+def test_feedback_guard_limits_and_privacy():
+    from maintai import feedback_guard as fg
+
+    guard = fg.FeedbackGuard(per_request=2, per_session=3)
+    assert guard.allow("s1", "a") == (True, "ok") and guard.allow("s1", "a") == (True, "ok")
+    assert guard.allow("s1", "a") == (False, "request_limit")  # third click on the same order
+    assert guard.allow("s1", "b") == (True, "ok")
+    assert guard.allow("s1", "c") == (False, "session_limit")  # session total reached
+    assert guard.allow("s2", "c") == (True, "ok")  # another session is independent
+    assert guard.allow(None, "x") == (True, "no session")  # check.py / tests: no session, not blocked
+    tag = fg.session_tag("abc123")
+    assert tag == fg.session_tag("abc123") and len(tag) == 16 and "abc123" not in tag  # stable within the process
+    assert fg.session_tag("") is None and fg.session_tag(None) is None
+
+    class FakeRequest:  # has client/headers like gr.Request; only session_hash may be read
+        session_hash = "abc123"
+        client = type("C", (), {"host": "203.0.113.7"})()
+        headers = {"user-agent": "secret-browser"}
+
+    assert fg.tag_from_request(FakeRequest()) == tag and fg.tag_from_request(None) is None
+
+
+def test_feedback_guard_expires_and_bounds_memory():
+    from maintai import feedback_guard as fg
+
+    now = [0.0]
+    guard = fg.FeedbackGuard(per_request=1, per_session=1, ttl_s=10, max_sessions=50, clock=lambda: now[0])
+    assert guard.allow("s", "a")[0] and not guard.allow("s", "b")[0]
+    now[0] = 11.0  # session expired: counters reset
+    assert guard.allow("s", "b")[0]
+    for i in range(500):
+        guard.allow(f"x{i}", "a")
+    assert guard.tracked_sessions() <= 50
+
+
+def test_ui_feedback_is_limited_per_session():
+    import app
+    from maintai import feedback_guard as fg
+
+    class Req:
+        session_hash = "ui-session-1"
+
+    reading = json.dumps({"type": "M", "air_temperature_k": 298.4, "process_temperature_k": 308.7,
+                          "rotational_speed_rpm": 1520, "torque_nm": 38.0, "tool_wear_min": 40})
+    record = app.serve(reading, session_tag=fg.tag_from_request(Req()))
+    assert record["session_tag"] == fg.tag_from_request(Req())
+    before = len(logbook._read("feedback"))
+    results = [app.on_feedback(record["id"], record["arm"], +1, Req()) for _ in range(fg.MAX_EVENTS_PER_REQUEST + 2)]
+    written = len(logbook._read("feedback")) - before
+    assert written == fg.MAX_EVENTS_PER_REQUEST  # extra clicks on the same order are refused, not logged
+    assert all(isinstance(r, str) for r in results[:fg.MAX_EVENTS_PER_REQUEST])
+
+
+def test_serve_and_run_stay_compatible():
+    import app
+
+    assert list(inspect.signature(app.serve).parameters)[0] == "raw_input"
+    assert inspect.signature(app.serve).parameters["session_tag"].default is None  # check.py: serve(raw_input)
+    record = app.serve(json.dumps({"type": "L", "air_temperature_k": 300.1, "process_temperature_k": 310.2,
+                                   "rotational_speed_rpm": 1450, "torque_nm": 42.0, "tool_wear_min": 100}))
+    assert logbook.validate(record) == [] and record["session_tag"] is None
+    api = app.demo.get_api_info()["named_endpoints"]
+    assert list(api) == ["/run"], list(api)  # the only public endpoint
+    assert [p["parameter_name"] for p in api["/run"]["parameters"]] == ["raw_input"]  # still one text argument
+    fn = next(f for f in app.demo.fns.values() if f.api_name == "run")
+    assert fn.concurrency_limit == app.RUN_CONCURRENCY >= 1 and app.demo._queue.max_size == app.QUEUE_MAX_SIZE
+
+
+def test_feedback_events_reader_is_guarded():
+    original = logbook._read
+    try:
+        logbook._read = lambda table: (_ for _ in ()).throw(RuntimeError("db down"))
+        ev = bandit.load_feedback_events()
+        assert ev.empty and "unreadable" in ev.attrs["error"]
+        logbook._read = lambda table: [{"id": "a", "timestamp": "2026-11-28T10:00:00+00:00", "feedback": 1},
+                                       {"id": "b", "timestamp": "not a date", "feedback": 1},
+                                       {"id": "c", "feedback": -1}, "garbage",
+                                       {"id": "d", "timestamp": "2026-11-28T09:00:00+00:00", "feedback": "x"}]
+        ev = bandit.load_feedback_events()
+        assert list(ev["id"]) == ["a"] and "malformed" in ev.attrs["error"]
+        del logbook._read  # the private helper disappears in a future logbook.py
+        ev = bandit.load_feedback_events()
+        assert ev.empty and "not available" in ev.attrs["error"]
+    finally:
+        logbook._read = original
+    from ui import rl_dashboard
+
+    logs = logbook.load()
+    logbook._read = lambda table: (_ for _ in ()).throw(RuntimeError("db down")) if table == "feedback" else original(table)
+    try:
+        page = rl_dashboard.render(logs)  # the dashboard still renders when only the rating events fail
+    finally:
+        logbook._read = original
+    assert "Adaptive intelligence" in page
+
+
+def test_missing_data_is_not_a_false_zero():
+    from maintai import rl_monitor as m
+    from ui import dashboard, rl_dashboard
+
+    for logs in (None, pd.DataFrame(), logs_from([rec(1, "cost", None)])):
+        assert m.response_rate(logs, PV)["rate"] in (None, 0.0)
+        d = m.reward_delay(logs, None, PV)
+        assert d["median_s"] is None and d["p95_s"] is None and d["n"] == 0
+        comp = m.belief_comparison(logs, PV)
+        assert comp["observed"].isna().all() and comp["ips"].isna().all()
+    assert m.response_rate(pd.DataFrame(), PV)["rate"] is None
+    page = rl_dashboard.render(pd.DataFrame())
+    assert "N/A" in page and "Pending" in page
+    # Monitoring KPIs: if monitor.summary() changes shape or fails, show N/A, never 0 / €0.0000.
+    logs = logs_from([{**rec(1, "cost", None), "review": False, "latency_s": 0.2, "cost_eur": 0.0, "features": {}}])
+    original = dashboard.monitor.summary
+    try:
+        dashboard.monitor.summary = lambda df: pd.DataFrame({"metric": ["requests"], "value": ["1"]})  # renamed metrics
+        page = dashboard.render(logs, None, "local files")
+        assert "€0.0000" not in page and page.count(">N/A<") >= 4
+        dashboard.monitor.summary = lambda df: (_ for _ in ()).throw(KeyError("feedback"))
+        assert ">N/A<" in dashboard.render(logs, None, "local files")
+    finally:
+        dashboard.monitor.summary = original
+    assert dashboard._number({"x": "-"}, "x") is None and dashboard._number({"x": "40%"}, "x") == 0.4
+    assert dashboard._number({"x": "nan"}, "x") is None and dashboard._number({"x": "0.0"}, "x") == 0.0  # a real zero stays
+
+
+def test_reward_delay_uses_first_rating_and_counts_changes():
+    from maintai import rl_monitor as m
+
+    t = pd.Timestamp("2026-11-28 10:00", tz="UTC")
+    rows = [rec(1, "cost", -1, minute=1), rec(2, "checklist", 1, minute=2), rec(3, "root_cause", 1, minute=3),
+            rec(4, "cost", 1, source="simulated", minute=4)]
+    events = pd.DataFrame([
+        {"id": "r1", "timestamp": t + pd.Timedelta(minutes=1, seconds=30), "feedback": 1},
+        {"id": "r1", "timestamp": t + pd.Timedelta(minutes=5), "feedback": -1},  # changed later: delay uses the first
+        {"id": "r2", "timestamp": t + pd.Timedelta(minutes=2, seconds=2), "feedback": 1},  # very fast (2 s)
+        {"id": "r3", "timestamp": t + pd.Timedelta(minutes=2), "feedback": 1},  # before its request: clock problem
+        {"id": "r4", "timestamp": t + pd.Timedelta(minutes=9), "feedback": 1},  # simulated: not eligible
+    ])
+    d = m.reward_delay(logs_from(rows), events, PV)
+    assert d["n"] == 2 and d["n_changed"] == 1 and d["n_fast"] == 1 and d["n_negative_dropped"] == 1
+    assert d["median_s"] == 16.0 and abs(d["p95_s"] - 28.6) < 1e-9
+
+
+def test_response_rate_coverage_and_beliefs():
+    from maintai import rl_monitor as m
+
+    rows = [rec(i, ARMS[i % 3], (1 if i % 2 else -1) if i % 4 else None) for i in range(1, 25)]
+    rows += [rec(90, "cost", 1, source="simulated")]  # never in the denominators
+    logs = logs_from(rows)
+    rr = m.response_rate(logs, PV)
+    assert rr["n_eligible"] == 24 and rr["n_rated"] == 18 and abs(rr["rate"] - 0.75) < 1e-12
+    cov = m.coverage_by_arm(logs, PV).set_index("arm")
+    assert cov["eligible"].sum() == 24 and cov["counted"].sum() == 18 and abs(cov["share_of_counted"].sum() - 1) < 1e-12
+    comp = m.belief_comparison(logs, PV).set_index("arm")
+    fb = bandit.eligible_feedback(logs, PV)
+    for arm in ARMS:
+        mine = fb[fb["arm"] == arm]
+        assert abs(comp.loc[arm, "observed"] - mine["reward"].mean()) < 1e-12
+        assert abs(comp.loc[arm, "posterior_mean"] - (1 + mine["reward"].sum()) / (2 + len(mine))) < 1e-12
+        assert abs(comp.loc[arm, "ips"] - mine["reward"].mean()) < 1e-12  # uniform logged probs: IPS = observed
+    assert abs(comp["p_select"].sum() - 1) < 1e-9
+
+
+def test_ips_corrects_for_uneven_serving_probabilities():
+    from maintai import rl_monitor as m
+
+    rows = []
+    for i in range(20):  # early on cost was served with p = 0.1 (rated well), later with p = 0.9 (rated badly)
+        early = i < 10
+        r = rec(i, "cost", 1 if early else -1)
+        r["arm_probs"] = {"checklist": 0.45 if early else 0.05, "cost": 0.1 if early else 0.9,
+                          "root_cause": 0.45 if early else 0.05}
+        rows.append(r)
+    comp = m.belief_comparison(logs_from(rows), PV).set_index("arm")
+    assert comp.loc["cost", "observed"] == 0.5
+    assert abs(comp.loc["cost", "ips"] - 0.9) < 1e-9  # (10/0.1) / (10/0.1 + 10/0.9)
+
+
+def test_served_probabilities_are_the_logged_ones_in_time_order():
+    from maintai import rl_monitor as m
+
+    rows = []
+    for i in range(1, 7):
+        r = rec(i, "cost", None)
+        r["arm_probs"] = {"checklist": 0.1 * i, "cost": 1 - 0.1 * i, "root_cause": 0.0}
+        rows.append(r)
+    rows.reverse()  # given out of order
+    served = m.served_probabilities(logs_from(rows))
+    assert list(served["p_checklist"].round(3)) == [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
+    blocks = m.served_probabilities(logs_from(rows), max_points=3)
+    assert list(blocks["n"]) == [2, 2, 2] and abs(blocks["p_checklist"].iloc[0] - 0.15) < 1e-12
+
+
+def test_non_response_flags_large_group_gaps_only_with_enough_data():
+    from maintai import rl_monitor as m
+
+    rows = []
+    for i in range(40):  # critical orders always rated, low-risk orders rarely
+        critical = i % 2 == 0
+        r = rec(i, ARMS[i % 3], 1 if critical or i % 10 == 1 else None)
+        r["risk_band"] = "critical" if critical else "low"
+        r["review"] = critical
+        rows.append(r)
+    nr = m.non_response(logs_from(rows), PV)
+    dims = {f["dimension"] for f in nr["flags"]}
+    assert "risk_band" in dims and "review" in dims
+    small = m.non_response(logs_from(rows[:8]), PV)
+    assert small["flags"] == [] and small["dimensions_with_enough_data"] == 0  # too few: no flag either way
+
+
+def test_evidence_export_is_aggregated_and_labelled():
+    sys.path.insert(0, str(ROOT / "eval"))
+    import export_rl_evidence as exporter
+
+    out = Path(tempfile.mkdtemp(prefix="rl-evidence-"))
+    from maintai import feedback_guard as fg
+
+    rid = _log_real_request("checklist")
+    logbook.log_feedback(rid, +1)
+    manifest = exporter.export(out)
+    files = {p.name for p in out.iterdir()}
+    for name in ["manifest.json", "metrics.json", "policy_snapshot.csv", "policy_history.csv", "served_probabilities.csv",
+                 "coverage_by_arm.csv", "belief_comparison.csv", "non_response.csv", "exclusions.csv", "simulation_summary.json"]:
+        assert name in files, name
+    assert set(manifest["provenance"]) == {"measured", "simulated", "assumption"}
+    text = "".join((out / f).read_text(encoding="utf-8") for f in files if f != "simulation_summary.json")
+    ids = set(logbook.load()["id"])
+    assert not any(i in text for i in ids)  # no request id leaves the logs
+    assert "session_tag" not in text  # no tag column or key is exported
+    sim = json.loads((out / "simulation_summary.json").read_text())
+    assert sim["data_type"] == "simulated"
+    for name in files - {"simulation_summary.json", "manifest.json", "metrics.json"}:
+        assert set(pd.read_csv(out / name)["data_type"]) <= {"measured"}, name
+    metrics = json.loads((out / "metrics.json").read_text())
+    assert metrics["data_type"] == "measured"
+    if not manifest["n_eligible_ratings"]:
+        assert "not evidence" in manifest["warning"]  # with the stub agent nothing is eligible: said explicitly
+
+
+def test_simulation_and_calibration_never_reach_production():
+    import ast
+
+    for path in ["maintai/bandit.py", "maintai/rl_monitor.py", "app.py", "pipeline.py"]:
+        tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
+        names = {a.name for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom)) for a in n.names}
+        mods = {n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}
+        assert not ({"simulate_bandit", "bandit_calibration", "export_rl_evidence"} & (names | mods)), path
+        assert "bandit_simulation" not in (ROOT / path).read_text() and "bandit_calibration" not in (ROOT / path).read_text(), path
+    assert bandit.load_prior() == UNIFORM  # production prior untouched by any simulated prior
+    from ui import rl_dashboard
+
+    page = rl_dashboard.render(pd.DataFrame())
+    live, _, sim = page.partition('class="mai-card mai-sim"')
+    assert "Coverage of the 95% credible intervals" in sim and "Coverage of the 95% credible intervals" not in live
+    sim_ids = {r["id"] for r in logbook._read("requests") if r.get("source") == "simulated"}
+    assert not sim_ids  # no test or tool wrote simulated requests into the logs
+
+
+def test_calibration_is_reproducible_and_sane():
+    sys.path.insert(0, str(ROOT / "eval"))
+    import bandit_calibration as cal
+
+    a = cal.run_scenario("prior_draw", None, runs=30, rounds=60, checkpoints=(20, 60))
+    b = cal.run_scenario("prior_draw", None, runs=30, rounds=60, checkpoints=(20, 60))
+    pd.testing.assert_frame_equal(a, b)  # same seed, same intervals
+    assert ((a["ci_low"] <= a["ci_high"]) & a["ci_low"].between(0, 1) & a["ci_high"].between(0, 1)).all()
+    table = cal.summarise(a)
+    overall = table[table["group"] == "all styles"]
+    assert overall["coverage"].between(0.85, 1.0).all()  # rates drawn from the prior: close to the nominal 95%
+    saved = json.loads((ROOT / "eval" / "bandit_calibration_summary.json").read_text())
+    assert saved["source"] == "simulated" and saved["nominal"] == 0.95
+
+
+def test_performance_and_memory_budget():
+    import time
+    import tracemalloc
+
+    from maintai import rl_monitor as m
+    from ui import rl_dashboard
+
+    rows = [{**rec(i, ARMS[i % 3], (1 if i % 3 else -1) if i % 2 else None), "session_tag": f"s{i % 200}",
+             "risk_band": ["low", "medium", "high", "critical"][i % 4], "review": i % 4 == 3} for i in range(5000)]
+    logs = logs_from(rows)
+    t = pd.Timestamp("2026-11-28 10:00", tz="UTC")
+    events = pd.DataFrame([{"id": r["id"], "timestamp": t + pd.Timedelta(minutes=i, seconds=40), "feedback": r["feedback"]}
+                           for i, r in enumerate(rows) if r["feedback"] is not None])
+    tracemalloc.start()
+    start = time.perf_counter()
+    bandit.decide(logs, seed=1, prompt_version=PV)
+    decide_s = time.perf_counter() - start
+    start = time.perf_counter()
+    m.evidence(logs, events, PV)
+    metrics_s = time.perf_counter() - start
+    peak_mb = tracemalloc.get_traced_memory()[1] / 1e6
+    tracemalloc.stop()
+    original = bandit.current_prompt_version
+    bandit.current_prompt_version = lambda: PV
+    try:
+        start = time.perf_counter()
+        rl_dashboard.render(logs)
+        render_s = time.perf_counter() - start
+    finally:
+        bandit.current_prompt_version = original
+    print(f"      5,000 requests: decide {decide_s * 1000:.0f} ms, metrics {metrics_s * 1000:.0f} ms, "
+          f"dashboard {render_s * 1000:.0f} ms, metrics peak {peak_mb:.0f} MB (Python allocations)")
+    assert decide_s < 1.0 and metrics_s < 5.0 and render_s < 10.0 and peak_mb < 150  # local budget; Render is slower
 
 if __name__ == "__main__":
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_") and callable(f)]
