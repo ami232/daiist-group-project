@@ -1,0 +1,204 @@
+{
+    "model_version": "maintai-gb-sigmoid-v1",
+    "algorithm": "Gradient Boosting",
+    "calibration": {
+        "method": "sigmoid",
+        "cv_folds": 5,
+        "ensemble": false
+    },
+    "hyperparameters": {
+        "n_estimators": 100,
+        "learning_rate": 0.1,
+        "max_depth": 3,
+        "random_state": 42
+    },
+    "sklearn_version": "1.9.1",
+    "dataset": {
+        "name": "AI4I 2020 Predictive Maintenance",
+        "source": "UCI Machine Learning Repository",
+        "license": "CC BY 4.0",
+        "sha256": "dc6630cd9b1f0f853922fad78a1b6436570d3f1ec863f1dd5c4340ac56bc8a8e",
+        "split_seed": 42,
+        "split_method": "stratified random",
+        "training_rows": 6000,
+        "validation_rows": 2000,
+        "test_rows": 2000
+    },
+    "target": "Machine failure",
+    "features": [
+        "type",
+        "air_temperature_k",
+        "process_temperature_k",
+        "rotational_speed_rpm",
+        "torque_nm",
+        "tool_wear_min",
+        "temp_diff_k",
+        "power_w",
+        "strain_min_nm",
+        "strain_ratio"
+    ],
+    "training_ranges": {
+        "air_temperature_k": {
+            "min": 295.3,
+            "max": 304.5
+        },
+        "process_temperature_k": {
+            "min": 305.7,
+            "max": 313.8
+        },
+        "rotational_speed_rpm": {
+            "min": 1168.0,
+            "max": 2886.0
+        },
+        "torque_nm": {
+            "min": 3.8,
+            "max": 76.6
+        },
+        "tool_wear_min": {
+            "min": 0.0,
+            "max": 253.0
+        },
+        "temp_diff_k": {
+            "min": 7.6,
+            "max": 12.1
+        },
+        "power_w": {
+            "min": 1148.4,
+            "max": 10469.9
+        },
+        "strain_min_nm": {
+            "min": 0.0,
+            "max": 16497.0
+        },
+        "strain_ratio": {
+            "min": 0.0,
+            "max": 1.37475
+        }
+    },
+    "threshold": 0.19,
+    "critical_threshold": 0.8,
+    "uncertainty_band": {
+        "lower": 0.095,
+        "upper": 0.38,
+        "lower_inclusive": true,
+        "upper_inclusive": false
+    },
+    "review_policy": [
+        "critical_risk",
+        "uncertain_prediction",
+        "out_of_training_range"
+    ],
+    "cost_assumptions": {
+        "intervention_eur": 300,
+        "failure_eur": 4000,
+        "prevention_effectiveness": 0.8,
+        "review_eur": 15,
+        "llm_eur": 0
+    },
+    "validation_metrics": {
+        "candidate": "Gradient Boosting - Sigmoid",
+        "brier_score": 0.007142206278825829,
+        "average_precision": 0.8830068384502895,
+        "threshold": 0.19,
+        "precision": 0.9322033898305084,
+        "recall": 0.8088235294117647,
+        "f1": 0.8661417322834646,
+        "true_negatives": 1928,
+        "false_positives": 4,
+        "false_negatives": 13,
+        "true_positives": 55,
+        "interventions": 59,
+        "reviews": 71,
+        "review_rate": 0.0355,
+        "total_cost_eur": 114765.0,
+        "cost_per_1000": 57382.5,
+        "savings_vs_no_action": 78617.5,
+        "savings_pct_vs_no_action": 57.80698529411765
+    },
+    "failure_mode_metrics": [
+        {
+            "failure_mode": "TWF",
+            "training_positives": 27,
+            "validation_positives": 12,
+            "accuracy": 0.9935,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "roc_auc": 0.8832788397048962,
+            "average_precision": 0.06304552772142866,
+            "brier_score": 0.006228530411543684,
+            "true_negatives": 1987,
+            "false_positives": 1,
+            "false_negatives": 12,
+            "true_positives": 0
+        },
+        {
+            "failure_mode": "HDF",
+            "training_positives": 67,
+            "validation_positives": 22,
+            "accuracy": 0.999,
+            "precision": 1.0,
+            "recall": 0.9090909090909091,
+            "f1": 0.9523809523809523,
+            "roc_auc": 0.9999540398933726,
+            "average_precision": 0.9962121212121212,
+            "brier_score": 0.0006000534083471866,
+            "true_negatives": 1978,
+            "false_positives": 0,
+            "false_negatives": 2,
+            "true_positives": 20
+        },
+        {
+            "failure_mode": "PWF",
+            "training_positives": 64,
+            "validation_positives": 16,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "roc_auc": 1.0,
+            "average_precision": 1.0,
+            "brier_score": 1.9526325982386105e-06,
+            "true_negatives": 1984,
+            "false_positives": 0,
+            "false_negatives": 0,
+            "true_positives": 16
+        },
+        {
+            "failure_mode": "OSF",
+            "training_positives": 57,
+            "validation_positives": 21,
+            "accuracy": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "roc_auc": 1.0,
+            "average_precision": 1.0,
+            "brier_score": 1.2234870983373712e-05,
+            "true_negatives": 1979,
+            "false_positives": 0,
+            "false_negatives": 0,
+            "true_positives": 21
+        }
+    ],
+    "failure_modes": {
+        "TWF": "Low reliability; advisory only",
+        "HDF": "Predictable in synthetic data",
+        "PWF": "Predictable in synthetic data",
+        "OSF": "Predictable in synthetic data",
+        "RNF": "Excluded: random by design"
+    },
+    "test_evaluated": false,
+    "limitations": [
+        "Synthetic dataset",
+        "Highly imbalanced target",
+        "27 inconsistencies between failure labels",
+        "Potential sequential correlation across random splits",
+        "No time-to-failure information",
+        "No observed maintenance intervention outcomes",
+        "Limited reliability of tool wear failure predictions",
+        "Economic assumptions are simulated",
+        "Validation costs exclude LLM costs",
+        "Requires human oversight"
+    ]
+}
