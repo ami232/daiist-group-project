@@ -194,6 +194,7 @@ scipy is never loaded inside `/run`. It is declared as a direct dependency in `p
 - `maintai/feedback_guard.py`: session tags and feedback limits.
 - `eval/bandit_calibration.py` with its outputs `eval/bandit_calibration.csv` and `eval/bandit_calibration_summary.json`: simulated only.
 - `eval/export_rl_evidence.py`: aggregated evidence export.
+- `eval/select_rl_scenarios.py` with its output `eval/rl_scenarios.csv`: 30 validation readings for the real feedback campaign (never the test split), with risk bands from the real component A (`status = final` since 27 Nov 2026); see `docs/RL_FEEDBACK_PROTOCOL.md`.
 - `tests/test_bandit.py`: 41 tests, run with `uv run python tests/test_bandit.py`. They cover:
   - posterior updates, the neutral prior and selection probabilities;
   - exclusions, and compatibility with a future prompt version;
@@ -209,3 +210,70 @@ scipy is never loaded inside `/run`. It is declared as a direct dependency in `p
   - `/run` and `serve()` compatibility;
   - a performance budget.
 - `app.py`: `serve()` uses `bandit.decide()` and logs the decision fields and the session tag. Its signature `serve(raw_input, session_tag=None)` is compatible with `serve(raw_input)`. `/run` still takes one text argument and is the only public endpoint.
+
+
+## Appendix: full report text of the bonus section (moved on 27 Nov 2026)
+
+`REPORT.md` was shortened on 27 Nov 2026 to respect the 3,000-word limit. This is its earlier bonus section, word for word (copied at commit `87f38ba`), so no detail, limitation or result is lost.
+
+
+**Status (26 Nov 2026): implemented and tested; no real learning evidence yet.**
+- **Labels.** [Measured] = local tests and measurements. [Simulated] = simulated users, never used by the live policy. [Pending] = not done yet.
+- **Why there is no real evidence yet.** Real ratings only start to count once the real risk model (WP1) and the real agent with one prompt per style (WP3) are deployed. We do not claim the bonus until there is evidence from real logs.
+
+**What learns, and what it may not touch.**
+- A multi-armed bandit chooses the *writing style* of each work order: `checklist` (short numbered steps), `cost` (opens with preventive vs breakdown cost) or `root_cause` (explains the physical indicators).
+- The style is passed to the agent, and nothing else. The risk model and the deterministic safety rules never receive it (`guardrails.finalise` has no arm argument).
+
+**The loop: feedback → reward → update → behaviour.**
+1. **Feedback.** The user rates the order without knowing its style; the style is revealed only after the vote.
+2. **Reward.** Useful = 1, not useful = 0. A request with no rating gives no reward.
+3. **Update.** The posterior for each style is Beta(α, β), with α = 1 + positive ratings and β = 1 + negative ratings. It is rebuilt from the logs on every request.
+4. **Behaviour.** Thompson sampling: draw one sample from each posterior and choose the highest. A style with little evidence sometimes draws a high sample and gets tried; a style with good evidence usually wins.
+
+**Exploration and exploitation.**
+- In Thompson sampling both come from the same rule: every choice is a posterior sample, and there is no separate exploration step.
+- For monitoring, we label a choice *exploration* when the chosen style is not the one with the highest posterior mean at that moment. The label is undefined while several styles share the highest mean, as under the neutral prior.
+- The cost of exploration is the regret below.
+
+**Prior: neutral Beta(1, 1)** (decided by Manuela; it revises decision D6).
+- We have no evidence that one style is better, so production starts with Beta(1, 1) for every style and no pseudo-observations. Every learned preference therefore comes from real ratings.
+- The master plan's capped simulated prior (10 pseudo-observations per style) was studied in simulation only.
+
+**Simulation results** [Simulated]. Source: `eval/simulate_bandit.py`, 100 runs × 300 ratings, fixed seeds. The simulated users like `root_cause` 75% of the time and the other styles 45%. Regret is the expected positive ratings lost against always choosing the best style.
+
+| Prior | P(best) after 50 | P(best) after 300 | Ratings to 80% | Regret after 100 | Regret after 300 |
+|---|---|---|---|---|---|
+| Neutral Beta(1, 1) | 82% | 98% | 45 | 7.0 | 9.4 |
+| Capped plan prior (10 pseudo-obs.) | 81% | 99% | 50 | 7.5 | 9.3 |
+| Wrong prior (favours `checklist` at 90%) | 63% | 99% | 80 | 13.0 | 15.9 |
+| Uniform random selection | 33% | 33% | never | 20.0 | 60.0 |
+
+- **Regret.** Thompson's cumulative regret flattens once the best style dominates, while random selection's grows linearly. After 300 ratings Thompson loses about 9 positive ratings against 60 for random.
+- **Wrong prior.** It roughly doubles the early regret but is corrected by the data.
+- **No false winner.** With three equally good styles (50% each), no style dominates: final selection probabilities are 38% / 29% / 33% with the neutral prior.
+- **Limits of the simulation.** Users are independent coin flips with fixed rates. Real ratings are fewer, noisier, correlated within a session, and may change over time.
+- **Calibration of the 95% intervals** [Simulated] (`eval/bandit_calibration.py`, 200 runs per scenario). With rates drawn from the prior, coverage is 95–96%, which checks the implementation. Adaptive sampling bends it: the best style is under-covered while it is being found (about 90% at 25–100 ratings), and a style starved after early bad luck can be badly under-covered (31% of 29 intervals and 0% of 16 with equal styles: small samples, kept in the results). The dashboard intervals are a guide, not a guarantee.
+
+**Risks.**
+- **Reward hacking.** The policy optimises what raters like, not what is correct. A style could win by sounding confident or being short. Mitigations: the safety rules and costs never come from the arm; the arm does not change the risk or the review rules; order quality is judged separately (evaluation and judge).
+- **Feedback bias.** Raters will mostly be the team and classmates, not technicians, and early ratings come from demo scenarios. Ratings are blind to the style, but the learned preference only shows that the loop works, not what technicians would prefer.
+- **Delayed and missing rewards.** A rating can arrive later, change, or never arrive. Unrated requests do not count; a changed rating replaces the earlier one; the history replays ratings in the order given. The dashboard measures the response rate and the reward delay (median and p95).
+- **Feedback loop.** The policy decides which style collects evidence, so a style with early bad luck is served less. Thompson sampling keeps serving it with its selection probability; we log those probabilities and show an exploratory propensity-weighted (IPS) estimate beside the observed reward. It is not causal and does not correct non-response.
+- **Non-response.** Only rated orders teach the policy. The dashboard compares response rates by risk band, decision and style, and flags gaps of 20 points or more.
+- **Abuse.** Feedback needs no login, so check.py keeps working. A random, temporary, pseudonymous session tag (no personal data) caps each session at 15 counted ratings and 3 clicks per order. It is not an identity: a new page is a new session.
+
+**Persistence and versioning.**
+- There is no state file: the posterior is rebuilt from the logs (PostgreSQL on Render) on every request, so it survives restarts and redeploys.
+- Each request logs the chosen arm, the selection probabilities (Monte Carlo, summing to 1), the exploration label and the policy version (`ts-v1`).
+- Only eligible ratings count: real traffic, handled, not degraded, no `stub` version, the current prompt version and a compatible policy version. A new prompt version starts a new policy.
+- If the logs cannot be read, the request is served from the prior alone and the record says so (`bandit_policy_from = "prior_only"`).
+
+**Tests** [Measured]. 41/41 pass (`uv run python tests/test_bandit.py`): updates, exclusions, duplicate and changed ratings, history without future information, restarts, log failures, session limits, reward delay, missing data, evidence export, simulation isolation, `/run` compatibility and a performance budget (list in `docs/WP6_BANDIT.md`).
+
+**Latency and memory** [Measured locally]. Choosing an arm takes 3–6 ms with up to 2,000 logged requests and about 60 ms with 5,000. A request served end to end with the stubs takes 4–7 ms. Peak memory is about 156 MB after serving and 205–210 MB after the first Monitoring refresh, which imports scipy (about 2 s); scipy is never loaded inside `/run`. `/run` serves two requests at a time from a bounded queue. [Pending] Measurement on Render (512 MB, 0.15 CPU) with the real models.
+
+**Pending and limitations.**
+- [Pending] **Safety with the real agent (WP3).** Today the action, priority and the agent's own review request come from the LLM draft, so a real LLM could change them with the style. A test with an adversarial agent records this gap. The fix belongs to WP3: decide those fields without the arm, use the arm only to write the text, and have the guardrails reject any difference (`docs/WP6_BANDIT.md`).
+- [Pending] **Real feedback campaign** and validation of persistence on PostgreSQL. Persistence is tested locally with log files, which use the same `logbook.load()`.
+- [Pending] **Real-feedback evidence for this report**: `eval/export_rl_evidence.py` exports it (aggregates only), once real ratings exist.

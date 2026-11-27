@@ -10,9 +10,7 @@
 
 ## Business case
 
-> **Status: written before any model was trained (25 Nov 2026).** Every number in this section is either a fact about the dataset, an economic **assumption**, or a metric that is **still to be measured**. Each one is labelled. The assumptions and criteria were approved by Manuela on 25 Nov 2026 and are pending confirmation by the rest of the team. Results will be added in later sections and will not overwrite this pre-registration.
-
-Labels used in this report:
+> **Pre-registered on 25 Nov 2026, before any model was trained** (commit `1d0135f`). Every number is a dataset fact, an economic assumption or a metric still to be measured, and is labelled. The assumptions and criteria were approved by Manuela and are pending confirmation by the rest of the team. The full version is in [docs/BUSINESS_CASE.md](docs/BUSINESS_CASE.md). The success criteria below are copied **unchanged** from that commit.
 
 | Label | Meaning |
 |---|---|
@@ -21,19 +19,7 @@ Labels used in this report:
 | **[To measure]** | Will be measured in the evaluation. No value yet |
 | **[Simulated]** | Produced by a simulator, not by real use of the app |
 
-### Value proposition
-
-MaintAI helps a maintenance manager decide which machines need attention now and turns that decision into a work order that is ready to approve. It estimates the risk that the current process on a machine ends in a failure, explains which failure mode is most likely, and drafts a work order with the action, spare parts, maintenance window and cost, checked against the plant's (simulated) stock, calendar and policies. The aim is fewer unplanned breakdowns without paying for many unnecessary inspections.
-
-### User and decision
-
-- **User:** the maintenance manager (or shift supervisor) of a machining plant.
-- **Decision we want to improve:** for each machine and process, *do nothing, schedule an inspection, or stop and intervene*, and with which priority, parts and time slot.
-- **Secondary task:** writing the work order. Today this is done by hand, using several separate systems.
-
-MaintAI is a decision-support tool. It does not control machines, it does not predict the exact time of a failure, and every critical or uncertain case is sent to a person before anything happens.
-
-### AS-IS and TO-BE
+**Value proposition.** MaintAI helps the maintenance manager of a machining plant decide, for each machine and process, whether to do nothing, schedule an inspection or stop and intervene. It turns that decision into a work order ready to approve: action, spare parts, maintenance window and cost, checked against the plant's (simulated) stock, calendar and policies. The aim is fewer unplanned breakdowns without paying for many unnecessary inspections. It is decision support: it does not control machines or predict when a failure will happen, and every critical or uncertain case goes to a person.
 
 | | AS-IS (today, without MaintAI) | TO-BE (with MaintAI) |
 |---|---|---|
@@ -42,9 +28,7 @@ MaintAI is a decision-support tool. It does not control machines, it does not pr
 | Human role | Decides everything, usually after an alarm | Approves orders. Reviews every critical, uncertain or out-of-range case |
 | Learning | None | Technicians rate orders (👍/👎). A bandit learns which work-order style they find most useful. Safety rules never change |
 
-### Baselines
-
-The comparison must be fair, so the baselines get the same data and the same cost model as MaintAI, and their thresholds are **tuned on the training and validation data**, not set by hand. A baseline that is easy to beat would make the result meaningless.
+**Baselines.** They get the same data and cost model as MaintAI, with thresholds tuned on the training and validation splits, so the bar is not easy to beat. The work-order baseline is the rule-based template used in degraded mode.
 
 | Policy | Rule | Role |
 |---|---|---|
@@ -53,10 +37,6 @@ The comparison must be fair, so the baselines get the same data and the same cos
 | **B2 · Condition-monitoring rules** | Intervene if any single sensor crosses its limit: tool wear, torque, low rotational speed or a small air–process temperature difference. Limits tuned to minimise expected cost | A realistic alarm system without machine learning |
 | **Main baseline** | The better of B1 and B2 on the validation split | The bar MaintAI has to clear |
 | **Oracle (not a baseline)** | The rules that generated the synthetic dataset | Upper bound only. No real plant knows these rules, so beating them is not expected |
-
-For the work order itself, the baseline is a **rule-based template**: the same order the app produces in degraded mode, when the LLM is not available. This lets us measure what the agent adds over a fixed template.
-
-### KPIs
 
 | Type | KPI | Status |
 |---|---|---|
@@ -67,7 +47,7 @@ For the work order itself, the baseline is a **rule-based template**: the same o
 
 ### Economic model
 
-We compare policies by their **expected cost per 1,000 processes**. One process is one row of the dataset.
+Policies are compared by their **expected cost per 1,000 processes** (one process is one row of the dataset).
 
 | Symbol | Meaning | Working value |
 |---|---|---|
@@ -78,8 +58,6 @@ We compare policies by their **expected cost per 1,000 processes**. One process 
 | *V* | Processes (machine cycles) assessed per day | 1,000 [Assumption] |
 | *C_LLM* | Cost of the AI per request, at the paid Gemini price | [To measure] from logged tokens |
 
-Cost of each outcome:
-
 | Outcome | What happens | Cost |
 |---|---|---|
 | True positive | Intervention on a process that would fail | *C_I* + (1 − *e*) · *C_F* |
@@ -89,13 +67,7 @@ Cost of each outcome:
 | Any case sent to review | A supervisor checks the order | + *C_R* |
 | Any MaintAI request | Model and API cost | + *C_LLM* |
 
-The term (1 − *e*) · *C_F* means that an intervention does **not** always prevent the failure.
-
-**Break-even probability (simplified model).** If we ignore review and AI costs, intervening pays off when the failure probability *p* satisfies *p* · *e* · *C_F* > *C_I*. The break-even probability is then *p\** = *C_I* / (*e* · *C_F*) = 300 / (0.8 × 4,000) = 0.09375, about 9.4%. This explains why component A must give **calibrated** probabilities. It is only a starting point: the final decision threshold will be chosen on the validation split with the **full** cost model, which also includes the review cost *C_R*, the measured AI cost *C_LLM* and the effect of the review band.
-
-**Monthly value.** Savings per 1,000 processes are converted to euros per month with an assumed volume of **1,000 processes per day** [Assumption]. A process is one machine cycle that MaintAI assesses, so 1,000 processes a day may come from far fewer machines. They are not 1,000 different machines. The costs of review and of the AI are included, so the figure is net.
-
-**Planned sensitivity analysis.** The working values are not sourced, so the conclusion must hold across a range, not only at one point.
+An intervention does not always prevent the failure, hence the term (1 − *e*) · *C_F*. Ignoring review and AI costs, intervening pays off above *p\** = *C_I* / (*e* · *C_F*) = 300 / (0.8 × 4,000) ≈ 9.4%, which is why component A must give **calibrated** probabilities. The final threshold is chosen on the validation split with the full cost model (review cost, measured AI cost, review band). Savings are converted to euros per month at an assumed **1,000 processes a day** [Assumption], net of review and AI costs.
 
 | Assumption | Range tested |
 |---|---|
@@ -104,9 +76,7 @@ The term (1 − *e*) · *C_F* means that an intervention does **not** always pre
 | *C_R* (review cost) | €0 to €50 |
 | Daily volume | 200 to 5,000 processes |
 
-For each setting we recompute the cost of MaintAI and of the main baseline and report where MaintAI stops being cheaper. When a setting needs new thresholds, both MaintAI's and the baselines' are re-tuned **only on the training and validation splits, never on the test split**. The test split is then used once per setting to report the cost. The results will be labelled as model outputs under assumptions, not as real savings.
-
-**Where the economic numbers come from.** Costs per 1,000 processes, savings and cases sent to review per day are computed only on the **test split**, which keeps the natural failure rate of the dataset. `eval/cases.csv` is different: we chose its cases on purpose to over-represent hard, review and out-of-scope inputs. It is used to check behaviour by kind of case, not to estimate plant-level costs, and its costs are never extrapolated to the whole plant.
+For each setting, thresholds are re-tuned only on the training and validation splits, and the test split is used once. Plant-level costs come only from the test split, which keeps the natural failure rate. `eval/cases.csv` over-represents hard cases on purpose and is never extrapolated to the plant.
 
 ### Success criteria and go / no-go (set before seeing results)
 
@@ -142,13 +112,12 @@ The seven criteria:
 
 ### Limitations
 
-- **Synthetic data.** [Fact] AI4I 2020 is synthetic and its failures come from a few known rules. Models may look better than they would on real machines, so results do not transfer directly to a real plant.
-- **No time to failure.** [Fact] Each row is a single snapshot with no machine history. MaintAI estimates the risk that *this process* fails under the current conditions, not *when* a machine will fail.
-- **Few failures.** Failures are rare, so test metrics will be uncertain. We will report bootstrap confidence intervals.
-- **Random failures.** [Fact] One failure mode (RNF) is random by design and cannot be predicted.
-- **Assumed costs.** All euro values are assumptions. Savings are model outputs, not observed savings.
-- **Simulated plant systems.** Stock, calendar, costs and policies used by the agent are simulated.
-- **Feedback.** Ratings in the live app will come mainly from the team and classmates, not from real technicians. Any learning from this feedback shows that the loop works, not what real technicians would prefer.
+- **Synthetic data** [Fact]. AI4I 2020 failures come from a few known rules, so results may not transfer to a real plant.
+- **No time to failure** [Fact]. Each row is a snapshot: MaintAI estimates the risk that this process fails, not when a machine will fail.
+- **Few failures** [Fact] (3.4% of rows). Test metrics are uncertain, so we report bootstrap intervals.
+- **Random failures** [Fact]. RNF cannot be predicted by design.
+- **Assumed costs and simulated plant systems.** Savings are model outputs, not observed savings.
+- **Feedback** comes mainly from the team and classmates, not technicians: learning shows that the loop works, not what technicians prefer.
 
 ## Architecture
 
@@ -459,7 +428,7 @@ The final economic comparison against the main baseline, plant-level extrapolati
 
 **Deployment (25 Nov 2026).** The app runs on Render's free plan at https://maintai-238a.onrender.com, created from `render.yaml` as a Blueprint: one web service and one free PostgreSQL database for the logs, connected through `DATABASE_URL`. `GEMINI_API_KEY` is stored only in the service's environment variables. On Render, `LLM_CACHE=off`, so live requests never come from the LLM cache, and `DAILY_LLM_BUDGET=400` keeps a margin below the free tier's 500 requests a day.
 
-**Records excluded from analysis.** The first deployment still used stub components. The 2 requests and 2 👍 logged on 25 Nov 2026 were smoke tests of the deployment. They are not evidence for the evaluation or for the bandit's learning. They can be identified by their versions, which start with `stub-` (for example `component_a = stub-a-v0`), and every analysis and the bandit exclude records with stub versions.
+**Records excluded from analysis.** The first deployment still used stub components. The 3 requests and 2 👍 logged on 25 Nov 2026 were smoke tests of the deployment (confirmed in the PostgreSQL export of 27 Nov 2026). They are not evidence for the evaluation or for the bandit's learning. They can be identified by their versions, which start with `stub-` (for example `component_a = stub-a-v0`), and every analysis and the bandit exclude records with stub versions.
 
 ## Failures
 ### Component A — Failure analysis and limitations
@@ -525,30 +494,19 @@ The selected configuration is suitable for integration and further evaluation as
 
 ## Bonus: reinforcement learning
 
-**Status (26 Nov 2026): implemented and tested; no real learning evidence yet.**
-- **Labels.** [Measured] = local tests and measurements. [Simulated] = simulated users, never used by the live policy. [Pending] = not done yet.
-- **Why there is no real evidence yet.** Real ratings only start to count once the real risk model (WP1) and the real agent with one prompt per style (WP3) are deployed. We do not claim the bonus until there is evidence from real logs.
+**Status (27 Nov 2026): implemented, tested and deployed; no real learning evidence yet.** Ratings only count once the real risk model (WP1) and the real agent (WP3) are live, so we do not claim the bonus without evidence from real logs. Details: [docs/WP6_BANDIT.md](docs/WP6_BANDIT.md); pre-registered campaign: [docs/RL_FEEDBACK_PROTOCOL.md](docs/RL_FEEDBACK_PROTOCOL.md).
 
-**What learns, and what it may not touch.**
-- A multi-armed bandit chooses the *writing style* of each work order: `checklist` (short numbered steps), `cost` (opens with preventive vs breakdown cost) or `root_cause` (explains the physical indicators).
-- The style is passed to the agent, and nothing else. The risk model and the deterministic safety rules never receive it (`guardrails.finalise` has no arm argument).
+**What learns.** A Thompson-sampling bandit chooses the *writing style* of each work order (`checklist`, `cost`, `root_cause`). Only the agent receives it; the risk model and the safety rules never do.
 
-**The loop: feedback → reward → update → behaviour.**
-1. **Feedback.** The user rates the order without knowing its style; the style is revealed only after the vote.
-2. **Reward.** Useful = 1, not useful = 0. A request with no rating gives no reward.
-3. **Update.** The posterior for each style is Beta(α, β), with α = 1 + positive ratings and β = 1 + negative ratings. It is rebuilt from the logs on every request.
-4. **Behaviour.** Thompson sampling: draw one sample from each posterior and choose the highest. A style with little evidence sometimes draws a high sample and gets tried; a style with good evidence usually wins.
+**The loop.**
+1. **Feedback.** The user rates the order blind to its style.
+2. **Reward.** Useful = 1, not useful = 0; the latest rating counts; no rating, no reward.
+3. **Update.** Beta(1 + positive, 1 + negative) per style, rebuilt from the logs (PostgreSQL) on every request.
+4. **Behaviour.** One sample per posterior; the highest wins. Exploration comes from the same rule.
 
-**Exploration and exploitation.**
-- In Thompson sampling both come from the same rule: every choice is a posterior sample, and there is no separate exploration step.
-- For monitoring, we label a choice *exploration* when the chosen style is not the one with the highest posterior mean at that moment. The label is undefined while several styles share the highest mean, as under the neutral prior.
-- The cost of exploration is the regret below.
+Each request logs the style, the selection probabilities and the policy version.
 
-**Prior: neutral Beta(1, 1)** (decided by Manuela; it revises decision D6).
-- We have no evidence that one style is better, so production starts with Beta(1, 1) for every style and no pseudo-observations. Every learned preference therefore comes from real ratings.
-- The master plan's capped simulated prior (10 pseudo-observations per style) was studied in simulation only.
-
-**Simulation results** [Simulated]. Source: `eval/simulate_bandit.py`, 100 runs × 300 ratings, fixed seeds. The simulated users like `root_cause` 75% of the time and the other styles 45%. Regret is the expected positive ratings lost against always choosing the best style.
+**Prior and eligibility.** Neutral Beta(1, 1) (Manuela's decision), so every preference comes from real ratings. A rating counts only for real, handled, non-degraded, non-`stub` traffic with the current prompt version, within the first 15 rated requests of a session.
 
 | Prior | P(best) after 50 | P(best) after 300 | Ratings to 80% | Regret after 100 | Regret after 300 |
 |---|---|---|---|---|---|
@@ -557,34 +515,21 @@ The selected configuration is suitable for integration and further evaluation as
 | Wrong prior (favours `checklist` at 90%) | 63% | 99% | 80 | 13.0 | 15.9 |
 | Uniform random selection | 33% | 33% | never | 20.0 | 60.0 |
 
-- **Regret.** Thompson's cumulative regret flattens once the best style dominates, while random selection's grows linearly. After 300 ratings Thompson loses about 9 positive ratings against 60 for random.
-- **Wrong prior.** It roughly doubles the early regret but is corrected by the data.
-- **No false winner.** With three equally good styles (50% each), no style dominates: final selection probabilities are 38% / 29% / 33% with the neutral prior.
-- **Limits of the simulation.** Users are independent coin flips with fixed rates. Real ratings are fewer, noisier, correlated within a session, and may change over time.
-- **Calibration of the 95% intervals** [Simulated] (`eval/bandit_calibration.py`, 200 runs per scenario). With rates drawn from the prior, coverage is 95–96%, which checks the implementation. Adaptive sampling bends it: the best style is under-covered while it is being found (about 90% at 25–100 ratings), and a style starved after early bad luck can be badly under-covered (31% of 29 intervals and 0% of 16 with equal styles: small samples, kept in the results). The dashboard intervals are a guide, not a guarantee.
+[Simulated] 100 runs × 300 ratings; users like `root_cause` 75% of the time, the others 45%. Regret flattens (about 9 positive ratings lost after 300, against 60 for random). With three equal styles no false winner appears. Simulated users are independent coin flips, unlike real raters. The 95% intervals cover 95–96% when rates come from the prior, about 90% for the best style while it is being found, and much less for a style starved early (31% of 29 intervals, 0% of 16: small samples, kept). They are a guide, not a guarantee.
 
-**Risks.**
-- **Reward hacking.** The policy optimises what raters like, not what is correct. A style could win by sounding confident or being short. Mitigations: the safety rules and costs never come from the arm; the arm does not change the risk or the review rules; order quality is judged separately (evaluation and judge).
-- **Feedback bias.** Raters will mostly be the team and classmates, not technicians, and early ratings come from demo scenarios. Ratings are blind to the style, but the learned preference only shows that the loop works, not what technicians would prefer.
-- **Delayed and missing rewards.** A rating can arrive later, change, or never arrive. Unrated requests do not count; a changed rating replaces the earlier one; the history replays ratings in the order given. The dashboard measures the response rate and the reward delay (median and p95).
-- **Feedback loop.** The policy decides which style collects evidence, so a style with early bad luck is served less. Thompson sampling keeps serving it with its selection probability; we log those probabilities and show an exploratory propensity-weighted (IPS) estimate beside the observed reward. It is not causal and does not correct non-response.
-- **Non-response.** Only rated orders teach the policy. The dashboard compares response rates by risk band, decision and style, and flags gaps of 20 points or more.
-- **Abuse.** Feedback needs no login, so check.py keeps working. A random, temporary, pseudonymous session tag (no personal data) caps each session at 15 counted ratings and 3 clicks per order. It is not an identity: a new page is a new session.
+**Risks and controls.**
+- *Reward hacking:* raters may prefer confident text over correct orders. The style never changes risk, action or review, and quality is judged separately.
+- *Feedback bias:* raters are the team and classmates, not technicians.
+- *Delayed, missing or changed ratings:* response rate and reward delay are monitored.
+- *Feedback loop and non-response:* a style with early bad luck is served less. We show logged probabilities, response rates by risk band and style, and an exploratory propensity-weighted (IPS) estimate: not causal, and no correction for non-response.
+- *Abuse:* no login (check.py must work). A temporary, pseudonymous session tag without personal data caps counted ratings per session; it is not an identity.
 
-**Persistence and versioning.**
-- There is no state file: the posterior is rebuilt from the logs (PostgreSQL on Render) on every request, so it survives restarts and redeploys.
-- Each request logs the chosen arm, the selection probabilities (Monte Carlo, summing to 1), the exploration label and the policy version (`ts-v1`).
-- Only eligible ratings count: real traffic, handled, not degraded, no `stub` version, the current prompt version and a compatible policy version. A new prompt version starts a new policy.
-- If the logs cannot be read, the request is served from the prior alone and the record says so (`bandit_policy_from = "prior_only"`).
+[Measured] 41/41 tests pass; choosing a style takes 3–6 ms with 2,000 logged requests; local peak memory is about 210 MB. Deployed on Render on 27 Nov 2026; memory there is not measured yet.
 
-**Tests** [Measured]. 41/41 pass (`uv run python tests/test_bandit.py`): updates, exclusions, duplicate and changed ratings, history without future information, restarts, log failures, session limits, reward delay, missing data, evidence export, simulation isolation, `/run` compatibility and a performance budget (list in `docs/WP6_BANDIT.md`).
-
-**Latency and memory** [Measured locally]. Choosing an arm takes 3–6 ms with up to 2,000 logged requests and about 60 ms with 5,000. A request served end to end with the stubs takes 4–7 ms. Peak memory is about 156 MB after serving and 205–210 MB after the first Monitoring refresh, which imports scipy (about 2 s); scipy is never loaded inside `/run`. `/run` serves two requests at a time from a bounded queue. [Pending] Measurement on Render (512 MB, 0.15 CPU) with the real models.
-
-**Pending and limitations.**
-- [Pending] **Safety with the real agent (WP3).** Today the action, priority and the agent's own review request come from the LLM draft, so a real LLM could change them with the style. A test with an adversarial agent records this gap. The fix belongs to WP3: decide those fields without the arm, use the arm only to write the text, and have the guardrails reject any difference (`docs/WP6_BANDIT.md`).
-- [Pending] **Real feedback campaign** and validation of persistence on PostgreSQL. Persistence is tested locally with log files, which use the same `logbook.load()`.
-- [Pending] **Real-feedback evidence for this report**: `eval/export_rl_evidence.py` exports it (aggregates only), once real ratings exist.
+**Pending.**
+1. WP3 must make action, priority and review independent of the style (an adversarial-agent test records the gap).
+2. The real campaign: 150 eligible ratings if quota allows. No clear winner is an acceptable result.
+3. Persistence of the new fields on PostgreSQL, and the evidence export.
 
 ## How to run it
 ### Reproducing Component A
