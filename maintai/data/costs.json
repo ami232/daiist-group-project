@@ -1,0 +1,12 @@
+{
+  "_label": "SIMULATED DATA. Planned downtime per action is an invented assumption. Euro amounts are NOT stored here: they come from maintai/economics.py (single cost model).",
+  "downtime_h": {
+    "monitor": 0.0,
+    "schedule_inspection": 1.0,
+    "replace_tool": 1.0,
+    "cooling_check": 2.0,
+    "power_check": 2.0,
+    "reduce_load": 0.5,
+    "stop_and_inspect": 3.0
+  }
+}
