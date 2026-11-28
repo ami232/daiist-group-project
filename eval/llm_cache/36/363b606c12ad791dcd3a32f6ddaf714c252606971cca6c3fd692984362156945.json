@@ -1,0 +1,17 @@
+{
+ "call": "write",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\"steps\": [\"Measure the mechanical power of 9456.2 W and check the spindle drive and fuses.\", \"Obtain approval from the maintenance supervisor for this P1 order.\", \"Replace the spindle drive fuse set using part id P-PW-020.\", \"Verify the mechanical power and spindle drive operation after replacement.\"], \"justification\": \"The failure mode PWF is driven by high mechanical power of 9456.2 W and an overstrain of 9730.0 min·Nm nearing the overstrain limit of 11000.0 min·Nm, resulting in a failure probability of 98.87 % and critical risk. Because of this critical risk and P1 priority, a human review is required before taking action. The decision mandates a power check and replacement of the spindle drive fuse set using part id P-PW-020.\"}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "root_cause",
+ "usage": {
+  "tokens_in": 1498,
+  "tokens_out": 189,
+  "tokens_thinking": 0
+ }
+}

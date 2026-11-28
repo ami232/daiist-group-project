@@ -1,0 +1,39 @@
+{
+ "call": "tools",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [
+   {
+    "args": {
+     "failure_mode": "PWF",
+     "machine_type": "M"
+    },
+    "name": "check_spare_parts"
+   },
+   {
+    "args": {
+     "duration_h": 2,
+     "urgency": "now"
+    },
+    "name": "find_maintenance_window"
+   },
+   {
+    "args": {
+     "failure_mode": "PWF",
+     "risk_band": "critical"
+    },
+    "name": "get_maintenance_policy"
+   }
+  ],
+  "text": ""
+ },
+ "prompt_version": "agent-v1",
+ "style": null,
+ "usage": {
+  "tokens_in": 1396,
+  "tokens_out": 83,
+  "tokens_thinking": 105
+ }
+}

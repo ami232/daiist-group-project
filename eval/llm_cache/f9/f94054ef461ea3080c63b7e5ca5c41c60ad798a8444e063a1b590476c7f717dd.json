@@ -1,0 +1,17 @@
+{
+ "call": "write",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\"steps\": [\"Measure the temperature difference (process minus air) of 8.6 K to confirm heat dissipation failure.\", \"Submit the work order for review and approval by the maintenance supervisor.\", \"Reserve the coolant pump seal kit part id P-CL-010 from stock.\", \"Replace the failing seal using part id P-CL-010.\", \"Check the cooling system before restarting.\", \"Run a test cycle and verify that the temperature difference (process minus air) returns to normal.\"], \"justification\": \"The high failure probability of 42.2 % is driven by heat dissipation failure, indicated by a temperature difference (process minus air) of 8.6 K and tool wear of 67.0 min. These conditions point to a thermal overload in the cooling system requiring immediate inspection and seal replacement. Therefore, the decision is to perform a cooling check, utilize part id P-CL-010, and obtain human review due to the high risk band.\"}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "root_cause",
+ "usage": {
+  "tokens_in": 1540,
+  "tokens_out": 205,
+  "tokens_thinking": 0
+ }
+}

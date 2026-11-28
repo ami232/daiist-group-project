@@ -1,0 +1,17 @@
+{
+ "call": "write",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\"steps\": [\"Check out part P-TW-001 Cutting tool insert from stock with 12 units available and zero lead time.\", \"Reduce the load to address overstrain risk until the tool has been inspected.\", \"Get approval from the maintenance supervisor for this P1 order.\", \"Complete the intervention and record the status.\"], \"justification\": \"A breakdown would cost about 13.3 times more than this intervention, which needs 0.5 h of planned downtime. The failure probability is 98.47 percent and the risk band is critical with likely mode overstrain. The decision requires reducing the load and obtaining human review because every P1 order needs approval by the maintenance supervisor.\"}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "cost",
+ "usage": {
+  "tokens_in": 1465,
+  "tokens_out": 146,
+  "tokens_thinking": 0
+ }
+}

@@ -1,0 +1,3 @@
+id,kind,expected,decision,review,error_cause
+c17,hard,decision=intervene; mode=TWF; review=any,monitor,False,component A: risk on the wrong side of the threshold
+c18,hard,decision=intervene; mode=TWF; review=any,monitor,True,component A: risk on the wrong side of the threshold

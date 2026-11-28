@@ -1,0 +1,199 @@
+{
+  "evidence": "real components",
+  "versions": {
+    "component_a": "maintai-gb-sigmoid-v1",
+    "component_b": "gemini-3.5-flash-lite|agent-v1",
+    "judge_rubric": "judge-rubric-v1"
+  },
+  "cases": {
+    "total": 41,
+    "normal": 16,
+    "hard": 10,
+    "review": 8,
+    "out_of_scope": 7
+  },
+  "end_to_end_correct": 0.951,
+  "by_kind": [
+    {
+      "kind": "hard",
+      "cases": 10,
+      "correct": 0.8,
+      "sent_to_review": 0.4,
+      "median_latency_s": 0.361,
+      "mean_cost_eur": 0.0
+    },
+    {
+      "kind": "normal",
+      "cases": 16,
+      "correct": 1.0,
+      "sent_to_review": 0.375,
+      "median_latency_s": 0.008,
+      "mean_cost_eur": 0.0
+    },
+    {
+      "kind": "out_of_scope",
+      "cases": 7,
+      "correct": 1.0,
+      "sent_to_review": 0.0,
+      "median_latency_s": 0.0,
+      "mean_cost_eur": 0.0
+    },
+    {
+      "kind": "review",
+      "cases": 8,
+      "correct": 1.0,
+      "sent_to_review": 1.0,
+      "median_latency_s": 0.34,
+      "mean_cost_eur": 0.001
+    }
+  ],
+  "component_a": {
+    "rows": 2000,
+    "failures": 68,
+    "threshold": 0.19,
+    "pr_auc": 0.9257,
+    "brier": 0.0058,
+    "recall": 0.868,
+    "precision": 0.881,
+    "interventions_per_1000": 33.5,
+    "missed_failures_per_1000": 4.5,
+    "unnecessary_interventions_per_1000": 4.0,
+    "mode_accuracy_on_failures": 0.985,
+    "review_per_1000": 35.5,
+    "model_version": "maintai-gb-sigmoid-v1"
+  },
+  "economics_test_split": {
+    "main_baseline": "B2",
+    "B1_rule": "intervene when tool wear >= 205 min",
+    "B2_rule": "intervene if tool wear >= 207 min or torque >= 60.5 Nm or temperature difference <= 8.6 K",
+    "llm_eur_per_request_used": 0.000213,
+    "policies": {
+      "B0": {
+        "cost_per_1000_eur": 136000.0,
+        "recall": 0.0,
+        "precision": 0.0,
+        "interventions_per_1000": 0.0,
+        "missed_failures_per_1000": 34.0,
+        "unnecessary_interventions_per_1000": 0.0
+      },
+      "B1": {
+        "cost_per_1000_eur": 124500.0,
+        "recall": 0.279,
+        "precision": 0.151,
+        "interventions_per_1000": 63.0,
+        "missed_failures_per_1000": 24.5,
+        "unnecessary_interventions_per_1000": 53.5
+      },
+      "B2": {
+        "cost_per_1000_eur": 90250.0,
+        "recall": 0.794,
+        "precision": 0.199,
+        "interventions_per_1000": 135.5,
+        "missed_failures_per_1000": 7.0,
+        "unnecessary_interventions_per_1000": 108.5
+      },
+      "MaintAI": {
+        "cost_per_1000_eur": 52182.7,
+        "recall": 0.868,
+        "precision": 0.881,
+        "interventions_per_1000": 33.5,
+        "missed_failures_per_1000": 4.5,
+        "unnecessary_interventions_per_1000": 4.0
+      }
+    },
+    "saving_vs_main_per_1000_eur": 38067.3,
+    "saving_vs_main_pct": 42.2,
+    "saving_95ci_per_1000_eur": [
+      25894.5,
+      50790.3
+    ]
+  },
+  "component_b": {
+    "orders": 34,
+    "valid_order": 1.0,
+    "grounded": 1.0,
+    "action_matches_mode": 1.0,
+    "addresses_predicted_mode": 1.0,
+    "priority_matches_band": 1.0,
+    "cost_from_tool": 1.0,
+    "review_rule_applied": 1.0,
+    "review_rule_cases": 17,
+    "review_rule_violations": [],
+    "ungrounded_orders": []
+  },
+  "judge": {
+    "model": "gemini-3.1-flash-lite",
+    "rubric": "judge-rubric-v1",
+    "key_available": true,
+    "graded": 68,
+    "calls_this_run": 11,
+    "tokens_this_run": 11273,
+    "agent_pass_rate": 0.618,
+    "agent_R1_addresses_risk": 1.0,
+    "agent_R2_actionable": 0.912,
+    "agent_R3_faithful": 0.676,
+    "agent_R4_safe_consistent": 0.971,
+    "template_pass_rate": 0.618,
+    "template_R1_addresses_risk": 1.0,
+    "template_R2_actionable": 0.618,
+    "template_R3_faithful": 0.824,
+    "template_R4_safe_consistent": 0.971
+  },
+  "human_agreement": {
+    "labels": 0,
+    "compared": 0
+  },
+  "operations": {
+    "latency_p50_s": 0.008,
+    "latency_p95_s": 1.524,
+    "tokens_per_request_mean": 482.4,
+    "eur_per_request_mean": 0.000213,
+    "eur_per_request_max": 0.002542,
+    "requests_with_llm_calls": 9,
+    "degraded_share": 0.147,
+    "run_cost_eur": 0.0072,
+    "run_tokens": 16400
+  },
+  "errors_by_cause": {
+    "component A: risk on the wrong side of the threshold": 2
+  },
+  "criteria": {
+    "1_cost": {
+      "saving_pct": 42.2,
+      "ci_eur": [
+        25894.5,
+        50790.3
+      ],
+      "target": ">= 10% cheaper than the main baseline, CI above 0"
+    },
+    "2_recall": {
+      "recall": 0.868,
+      "main_baseline_recall": 0.794,
+      "target": ">= 0.80"
+    },
+    "3_review_rule": {
+      "violations": [],
+      "target": "none"
+    },
+    "4_grounding": {
+      "ungrounded": [],
+      "target": "none"
+    },
+    "5_quality": {
+      "agent_pass": 0.618,
+      "template_pass": 0.618,
+      "kappa": null,
+      "human_labels": 0,
+      "target": "agent pass >= 0.80 and above the template, kappa >= 0.6 on >= 20 labels"
+    },
+    "6_out_of_scope": {
+      "all_refused_before_model": true,
+      "target": "all"
+    },
+    "7_operations": {
+      "p95_s": 1.524,
+      "eur_per_request": 0.000213,
+      "target": "p95 < 15 s and < \u20ac0.01 per request"
+    }
+  }
+}
