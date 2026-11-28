@@ -1,0 +1,17 @@
+{
+ "call": "low_risk",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\"steps\": [\"Keep normal operation.\", \"Re-check at the next reading.\", \"Watch tool wear of 60.0 min.\"], \"justification\": \"The failure probability of 0.22 % is low, so monitoring is enough.\"}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "checklist",
+ "usage": {
+  "tokens_in": 1089,
+  "tokens_out": 53,
+  "tokens_thinking": 0
+ }
+}

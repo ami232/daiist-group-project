@@ -1,0 +1,17 @@
+{
+ "call": "decision",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\n  \"priority\": \"P1\",\n  \"action\": \"power_check\",\n  \"failure_mode_addressed\": \"PWF\",\n  \"part_ids\": [\n    \"P-PW-020\"\n  ],\n  \"window_id\": null,\n  \"requires_human_review\": true,\n  \"review_reason\": \"Every P1 order needs approval by the maintenance supervisor.\"\n}"
+ },
+ "prompt_version": "agent-v1",
+ "style": null,
+ "usage": {
+  "tokens_in": 1378,
+  "tokens_out": 97,
+  "tokens_thinking": 0
+ }
+}

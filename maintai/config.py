@@ -9,7 +9,7 @@ import os
 # stable, no suffix; function calling, structured outputs and thinking supported. Free-tier RPM/RPD are not
 # published there ("can be viewed in Google AI Studio"); see REPORT.md, Cost and latency.
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
-DEFAULT_JUDGE_MODEL = "gemini-3.8-flash"  # TODO(WP4): confirm the exact model id in the Gemini docs
+DEFAULT_JUDGE_MODEL = "gemini-3.1-flash-lite"  # WP4: fits the free-tier quota; different from the agent model
 DEFAULT_DAILY_BUDGET = 400  # of the 500 requests a day of the free tier
 CACHE_MODES = ("readwrite", "readonly", "off")
 

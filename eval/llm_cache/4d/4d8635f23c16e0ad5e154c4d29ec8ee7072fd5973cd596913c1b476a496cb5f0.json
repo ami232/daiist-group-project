@@ -1,0 +1,17 @@
+{
+ "call": "decision",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\"priority\": \"P1\", \"action\": \"cooling_check\", \"failure_mode_addressed\": \"HDF\", \"part_ids\": [\"P-CL-010\"], \"window_id\": null, \"requires_human_review\": true, \"review_reason\": \"Critical risk requires human review according to plant policy.\"}"
+ },
+ "prompt_version": "agent-v1",
+ "style": null,
+ "usage": {
+  "tokens_in": 1439,
+  "tokens_out": 73,
+  "tokens_thinking": 0
+ }
+}

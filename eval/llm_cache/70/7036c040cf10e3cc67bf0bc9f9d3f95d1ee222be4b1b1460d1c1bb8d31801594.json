@@ -1,0 +1,17 @@
+{
+ "call": "write",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\n  \"steps\": [\n    \"Measure the mechanical power of 11126.5 W and temperature difference (process minus air) of 10.0 K to confirm power failure.\",\n    \"Submit the order for review by the maintenance supervisor as required for critical risk.\",\n    \"Check the spindle drive and fuses (part P-PW-020) before restarting.\",\n    \"Replace the spindle drive fuse set if faulty.\",\n    \"Verify proper operation of the spindle drive after maintenance.\"\n  ],\n  \"justification\": \"The failure mode is driven by a high failure probability of 98.71 percent and extreme operating conditions with a mechanical power of 11126.5 W and an overstrain (tool wear x torque) of 2550.0 min·Nm against a limit of 13000.0 min·Nm. These physical indicators point directly to power failure. Therefore, the decision is to perform a power check with part P-PW-020 under a P1 priority and require human review.\"\n}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "root_cause",
+ "usage": {
+  "tokens_in": 1511,
+  "tokens_out": 232,
+  "tokens_thinking": 0
+ }
+}

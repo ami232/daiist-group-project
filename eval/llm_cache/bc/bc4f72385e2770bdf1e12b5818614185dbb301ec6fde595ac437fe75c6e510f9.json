@@ -1,0 +1,17 @@
+{
+ "call": "decision",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\"priority\": \"P1\", \"action\": \"reduce_load\", \"failure_mode_addressed\": \"OSF\", \"part_ids\": [\"P-TW-001\"], \"window_id\": null, \"requires_human_review\": true, \"review_reason\": \"The risk band is critical and plant policy requires human review.\"}"
+ },
+ "prompt_version": "agent-v1",
+ "style": null,
+ "usage": {
+  "tokens_in": 1482,
+  "tokens_out": 75,
+  "tokens_thinking": 0
+ }
+}

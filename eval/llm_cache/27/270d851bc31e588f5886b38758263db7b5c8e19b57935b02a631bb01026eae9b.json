@@ -1,0 +1,17 @@
+{
+ "call": "write",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\n  \"steps\": [\n    \"Wait for maintenance supervisor approval before starting any action.\",\n    \"Check the spindle drive and fuses before restarting.\",\n    \"Inspect spindle drive fuse set P-PW-020.\",\n    \"Replace faulty fuses if needed.\"\n  ],\n  \"justification\": \"This critical power risk intervention follows plant policy requiring supervisor approval and fuse checks.\"\n}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "checklist",
+ "usage": {
+  "tokens_in": 1414,
+  "tokens_out": 84,
+  "tokens_thinking": 0
+ }
+}

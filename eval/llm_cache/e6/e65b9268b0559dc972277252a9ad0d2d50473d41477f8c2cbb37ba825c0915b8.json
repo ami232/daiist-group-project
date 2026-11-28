@@ -1,0 +1,17 @@
+{
+ "call": "write",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\n  \"steps\": [\n    \"Obtain approval from the maintenance supervisor before proceeding.\",\n    \"Reduce the machine load immediately.\",\n    \"Inspect the Cutting tool insert with part id P-TW-001.\",\n    \"Submit the work order for human review.\"\n  ],\n  \"justification\": \"This critical order requires supervisor approval and load reduction due to high overstrain risk.\"\n}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "checklist",
+ "usage": {
+  "tokens_in": 1419,
+  "tokens_out": 87,
+  "tokens_thinking": 0
+ }
+}
