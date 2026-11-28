@@ -19,3 +19,13 @@ c04,1,"numbers correct (12251.6 = 218 x 56.2 > 11000 limit), part from tools, re
 c20,1,"approval first, steps follow the PWF policy, part from tools, no invented numbers"
 c33,0,steps too vague; ignores OSF 97% and HDF 86%; no approval step at 100% risk
 c05,1,"approval first, reduce load as the OSF policy says, part from tools; minor: review repeated at the end"
+c30,1,"numbers correct (12600 = 280 x 45 > 11000), review before action, tool replacement also covers TWF; minor: does not mention wear out of range"
+c07,1,"low risk, monitor fits; all numbers computed from the reading (power, strain, temp diff)"
+c19,1,"8.6 K from reading (HDF edge), part from tools, approval before work; minor: assumes the seal is failing before inspecting"
+c12,1,"low risk, monitor fits; all numbers computed from the reading; minor: step 1 mentions a failure mode that is not there"
+c29,1,"numbers correct (11126.5 W from torque x rpm, 2550 vs H limit 13000), part from tools, review before work; minor: does not mention out of range"
+c10,1,"low risk, monitor fits, only number is p_fail from the risk"
+c26,0,"invents 1.0x and 0.0 h, no tool data, and they make no sense"
+c13,0,"invents 4.2x and 2.0 h, no tool data"
+c16,1,"low risk, monitor fits, only number is p_fail from the risk"
+c17,1,"consistent with the model's low risk, numbers correct; but 225 min is in the tool wear failure zone, risk likely underestimated"

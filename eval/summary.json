@@ -43,8 +43,8 @@
       "cases": 8,
       "correct": 1.0,
       "sent_to_review": 1.0,
-      "median_latency_s": 0.956,
-      "mean_cost_eur": 0.001
+      "median_latency_s": 0.008,
+      "mean_cost_eur": 0.0
     }
   ],
   "component_a": {
@@ -66,7 +66,7 @@
     "main_baseline": "B2",
     "B1_rule": "intervene when tool wear >= 205 min",
     "B2_rule": "intervene if tool wear >= 207 min or torque >= 60.5 Nm or temperature difference <= 8.6 K",
-    "llm_eur_per_request_used": 0.000205,
+    "llm_eur_per_request_used": 0.0,
     "policies": {
       "B0": {
         "cost_per_1000_eur": 136000.0,
@@ -93,7 +93,7 @@
         "unnecessary_interventions_per_1000": 108.5
       },
       "MaintAI": {
-        "cost_per_1000_eur": 52182.7,
+        "cost_per_1000_eur": 52182.5,
         "recall": 0.868,
         "precision": 0.881,
         "interventions_per_1000": 33.5,
@@ -101,11 +101,11 @@
         "unnecessary_interventions_per_1000": 4.0
       }
     },
-    "saving_vs_main_per_1000_eur": 38067.3,
+    "saving_vs_main_per_1000_eur": 38067.5,
     "saving_vs_main_pct": 42.2,
     "saving_95ci_per_1000_eur": [
-      25894.5,
-      50790.3
+      25894.8,
+      50790.5
     ]
   },
   "component_b": {
@@ -126,8 +126,8 @@
     "rubric": "judge-rubric-v1",
     "key_available": true,
     "graded": 68,
-    "calls_this_run": 6,
-    "tokens_this_run": 7038,
+    "calls_this_run": 2,
+    "tokens_this_run": 2606,
     "agent_pass_rate": 0.588,
     "agent_R1_addresses_risk": 1.0,
     "agent_R2_actionable": 1.0,
@@ -140,27 +140,30 @@
     "template_R4_safe_consistent": 0.971
   },
   "human_agreement": {
-    "labels": 20,
-    "compared": 20,
-    "agreement": 0.9,
-    "cohen_kappa": 0.765,
-    "human_pass_rate": 0.75,
-    "judge_pass_rate": 0.65,
+    "labels": 30,
+    "compared": 30,
+    "agreement": 0.833,
+    "cohen_kappa": 0.627,
+    "human_pass_rate": 0.767,
+    "judge_pass_rate": 0.6,
     "disagreements": [
       "c21",
-      "c34"
+      "c34",
+      "c07",
+      "c19",
+      "c10"
     ]
   },
   "operations": {
     "latency_p50_s": 0.008,
-    "latency_p95_s": 1.622,
-    "tokens_per_request_mean": 423.8,
-    "eur_per_request_mean": 0.000205,
-    "eur_per_request_max": 0.002515,
-    "requests_with_llm_calls": 5,
+    "latency_p95_s": 0.009,
+    "tokens_per_request_mean": 0.0,
+    "eur_per_request_mean": 0.0,
+    "eur_per_request_max": 0.0,
+    "requests_with_llm_calls": 0,
     "degraded_share": 0.0,
-    "run_cost_eur": 0.007,
-    "run_tokens": 14410
+    "run_cost_eur": 0.0,
+    "run_tokens": 0
   },
   "errors_by_cause": {
     "component A: risk on the wrong side of the threshold": 2
@@ -169,8 +172,8 @@
     "1_cost": {
       "saving_pct": 42.2,
       "ci_eur": [
-        25894.5,
-        50790.3
+        25894.8,
+        50790.5
       ],
       "target": ">= 10% cheaper than the main baseline, CI above 0"
     },
@@ -190,8 +193,8 @@
     "5_quality": {
       "agent_pass": 0.588,
       "template_pass": 0.618,
-      "kappa": 0.765,
-      "human_labels": 20,
+      "kappa": 0.627,
+      "human_labels": 30,
       "target": "agent pass >= 0.80 and above the template, kappa >= 0.6 on >= 20 labels"
     },
     "6_out_of_scope": {
@@ -199,8 +202,8 @@
       "target": "all"
     },
     "7_operations": {
-      "p95_s": 1.622,
-      "eur_per_request": 0.000205,
+      "p95_s": 0.009,
+      "eur_per_request": 0.0,
       "target": "p95 < 15 s and < \u20ac0.01 per request"
     }
   }
