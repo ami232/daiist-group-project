@@ -527,7 +527,7 @@ Each request logs the style, the selection probabilities and the policy version.
 [Measured] 41/41 tests pass; choosing a style takes 3–6 ms with 2,000 logged requests; local peak memory is about 210 MB. Deployed on Render on 27 Nov 2026; memory there is not measured yet.
 
 **Pending.**
-1. WP3 must make action, priority and review independent of the style (an adversarial-agent test records the gap).
+1. Style invariance: WP3's agent decides action, priority and review without the style, and the guardrails reject any difference. Checked with a simulated Gemini; real-Gemini check pending.
 2. The real campaign: 150 eligible ratings if quota allows. No clear winner is an acceptable result.
 3. Persistence of the new fields on PostgreSQL, and the evidence export.
 

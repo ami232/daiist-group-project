@@ -2,7 +2,7 @@
 
 How the remaining work packages go into `main`, what to run after each merge, and the submission checklist. Owner: Manuela (coordination). Status of each package: `docs/TEAM_PLAN.md`, section 0.
 
-**Progress (27 Nov, 21:30):** steps 1 (WP1, PR #9) and 2 (WP2, PR #8) are in `main` and deployed. WP4 is finished on its branch `feat/wp4-evaluation` (no PR yet); it merges with `main` without code conflicts and its tests pass on the combined tree. WP3 and WP5 have not started in GitHub. The live status is in `docs/TEAM_PLAN.md`, section 0.
+**Progress (28 Nov, 10:45):** steps 1 (WP1, PR #9), 2 (WP2, PR #8) and 3 (WP3, PR #12) are in `main` and deployed; Render serves the real agent. WP4 is finished on its branch `feat/wp4-evaluation` (no PR yet); it merged with `main` without code conflicts in a test on 27 Nov. WP5 has not started in GitHub. The live status is in `docs/TEAM_PLAN.md`, section 0.
 
 **Rule for every merge:** one PR per package, reviewed and approved by someone else, merged only if every check in section 2 passes. Every merge into `main` redeploys Render, so a broken `main` is a broken public app.
 
@@ -14,7 +14,7 @@ How the remaining work packages go into `main`, what to run after each merge, an
 | 2 | **WP2 · tools data and economics** (`maintai/data/*.json`, `tools.py`, `economics.py`, sensitivity script) | The agent's grounding is checked against these data | WP3 grounding, WP4 cost results |
 | 3 | **WP3 · LLM client, agent, prompts, guardrails** (one prompt per style, fixed prompt version, arm only changes the text) | Needs real risk and real tools; closes the safety gap of `docs/WP6_BANDIT.md` | WP4 end-to-end, RL campaign |
 | 4 | **WP5 · drift reference and shifted set** (`main.py reference`, `monitoring/reference_features.csv`, `eval/reference.csv`, `eval/shifted.csv`, threshold calibrated on validation) | `p_fail` is a drift feature, so the reference must be built **after** the real model | check.py step 4 |
-| 5 | **WP4 · evaluation** (`eval/cases.csv` ≥ 30 with all kinds, baselines B1/B2, `evaluate.py`, judge, `human_labels.csv` ≥ 30) | Needs the final pipeline; uses the test split once | check.py step 2, REPORT Evaluation, Decision |
+| 5 | **WP4 · evaluation** (`eval/cases.csv` ≥ 30 with all kinds, baselines B1/B2, `evaluate.py`, judge, `human_labels.csv`: at least 20 labels required by the professor and check.py, 30 as our internal target) | Needs the final pipeline; uses the test split once | check.py step 2, REPORT Evaluation, Decision |
 | 6 | **WP6 · real feedback campaign** (`docs/RL_FEEDBACK_PROTOCOL.md`) | Needs real model and real agent deployed, frozen prompts | REPORT bonus |
 | 7 | **WP8 · REPORT, CONTRIBUTIONS, tag `final`** | Last numbers from steps 1–6 | Submission |
 
@@ -68,7 +68,7 @@ uv run python check.py
 - **WP1:** validation metrics and the chosen threshold documented (`model_card.json`); `assess()` returns calibrated `p_fail`, band and likely modes; no test-split use before the final evaluation; app latency for component A under 1 s on Render.
 - **WP2:** every part, window, cost and policy the agent can cite exists in `maintai/data/`; the sensitivity script reproduces the grid of the business case.
 - **WP3:** at most 3 Gemini calls per request; 429 and budget handled with the degraded mode; tokens and cost logged; zero ungrounded orders after the guardrails; review rules applied in 100% of the cases that need them.
-- **WP4:** `eval/cases.csv` ≥ 30 with ≥ 1 normal, ≥ 5 hard, ≥ 5 review, ≥ 3 out_of_scope (check.py minimums; target 90); baselines tuned on train/validation; judge agreement (kappa) reported against `human_labels.csv`.
+- **WP4:** `eval/cases.csv` ≥ 30 with ≥ 1 normal, ≥ 5 hard, ≥ 5 review, ≥ 3 out_of_scope (check.py minimums; target 90); baselines tuned on train/validation; judge agreement (kappa) reported against `human_labels.csv` (at least 20 own labels are required by the brief and `check.py`; our internal target is 30).
 - **WP5:** drift alert fires on `eval/shifted.csv` and stays quiet on normal inputs; false-alarm rate reported.
 - **WP6:** campaign run as pre-registered, or reported as not run, with the evidence export.
 - **All:** `CONTRIBUTIONS.md` line in the same PR; no keys, personal data or logs committed.
@@ -141,7 +141,35 @@ Logs exported by Manuela at 20:55 with `main.py export-logs` (the database URL s
 | Stub records | 3 of 3 (all) |
 | Eligible for RL (`bandit.eligible_requests` / `eligible_feedback` on the export) | **0 requests, 0 ratings**, as expected: stub versions, old bandit version, degraded |
 
-**Still to verify:** that a request made **after** the hardening deploy stores `session_tag`, `bandit_policy_from` and the `ts-v1` `arm_probs` in PostgreSQL. Make one request from the App tab of the online app (no rating needed), export again and run the command of section 6.3. Locally the same record is complete (`check.py` step 3 simulation on 27 Nov: all required fields, `bandit = ts-v1`, `bandit_policy_from = logs`).
+**Verified on 27 Nov 2026 (export of 21:24, 4 requests and 2 ratings).** Manuela made one request from the App tab of the online app (sample *Normal operation*, not rated) after the hardening deploy. Its PostgreSQL record has every bandit field:
+
+| Field | Value in PostgreSQL |
+|---|---|
+| `session_tag` | Present, 16 hexadecimal characters (random, temporary; no personal data) |
+| `bandit_policy_from` | `logs` (the policy was rebuilt from PostgreSQL) |
+| `arm_probs` | Three probabilities from the `ts-v1` policy, summing to 1 (about one third each: neutral prior) |
+| `arm`, `bandit_n_feedback` | A style and 0 counted ratings |
+| `bandit_explore`, `bandit_greedy_arm` | Empty, as designed: under the neutral prior the styles are tied, so "exploration" is undefined |
+| `versions` | `component_a = maintai-gb-sigmoid-v1`, `bandit = ts-v1`, `component_b = none\|stub-agent-v0` |
+| Other fields | `source = real`, `status = ok`, risk band, review flag, features, latency, cost and tokens present; no IP address, user agent, name or e-mail |
+| RL eligibility | **Not eligible**, as expected: stub agent (`stub-agent-v0`), degraded order, no rating. 0 eligible requests and 0 eligible ratings in the whole export |
+
+**Persistence of the bandit fields in PostgreSQL: verified.** The logs were read locally from the export (git-ignored); nothing from `logs/` and no database URL is committed.
+
+### 6.5 WP3 compatibility (checked on 27–28 Nov 2026 with a simulated Gemini)
+
+WP3 (PR #12) was merged on 27 Nov 2026 and Render now serves the real agent (`agent-v1`): **every online request may use Gemini quota**. The checks below used WP3's offline fake Gemini (`tests/test_agent.py`), so **no Gemini call was made**:
+
+| Check | Result |
+|---|---|
+| Tests after the merge | `test_agent.py` 26/26, `test_bandit.py` 41/41, `test_economics.py` 12/12, `test_tools.py` 14/14 |
+| Decisions vs styles | Calls 1–2 (tools, decision) never see the style; call 3 writes the text with it. The decision fields are identical in the three styles, and `guardrails.finalise()` rejects a draft that differs from the arm-free decision (`test_arm_changes_writing_but_never_the_decision`, `test_guardrails_reject_a_draft_that_differs_from_the_arm_free_decision`) |
+| Bandit | `bandit.current_prompt_version()` = `agent-v1`; a non-degraded order logged as `gemini-3.5-flash-lite\|agent-v1` is eligible (excluded only until it is rated) |
+| Interface | App renders low-risk (1 call), high and critical (3 calls) orders, the agent trace and the new review reason `part_out_of_stock`; Monitoring renders the records |
+| Quota and cache | Daily budget rebuilt from the logs, at most 12 calls a minute, at most 2 retries on 429, degraded mode when exhausted; `LLM_CACHE=off` on Render, `readonly` locally (no calls on a cache miss) |
+| Memory | The Gemini client adds about 43 MB locally; estimated local peak about 315 MB (limit 512 MB) |
+
+**Pending:** validation with **real** Gemini (style invariance on live answers, latency, cost and memory on Render). WP3 reports three short live smoke tests of its own (14 calls, `docs/WP3_AGENT.md`); our team checks have not used Gemini.
 
 ## 7. Full check.py in a clean clone
 

@@ -15,8 +15,8 @@
 | # | Prerequisite | Owner | How we check it |
 |---|---|---|---|
 | P1 | Real risk model merged and deployed (`component_a` version does not start with `stub`) | WP1 | Monitoring banner no longer lists the risk model as a stub. **Met on 27 Nov 2026** |
-| P2 | Real agent merged and deployed, with one prompt per style and a fixed prompt version (no `stub`) | WP3 | `versions.prompt` in a test record |
-| P3 | The style cannot change the action, the priority or the review decision (the safety gap recorded in `docs/WP6_BANDIT.md`) | WP3 | The adversarial-agent test passes for the real agent |
+| P2 | Real agent merged and deployed, with one prompt per style and a fixed prompt version (no `stub`) | WP3 | `versions.prompt` in a test record. **Met on 27 Nov 2026** (`agent-v1`, deployed) |
+| P3 | The style cannot change the action, the priority or the review decision (the safety gap recorded in `docs/WP6_BANDIT.md`) | WP3 | The adversarial-agent test passes for the real agent. **Met with a simulated Gemini on 28 Nov 2026**; real-Gemini check pending |
 | P4 | Final scenario file: `eval/select_rl_scenarios.py` re-run with the real model, `status = final` in `eval/rl_scenarios.csv` | WP6 | The script prints `status = final`. **Met on 27 Nov 2026**; re-check if the model version changes |
 | P5 | `session_tag`, `arm`, `arm_probs` and feedback rows persist in PostgreSQL on Render | Manuela | `docs/INTEGRATION_CHECKLIST.md`, section 6 |
 | P6 | `check.py` passes on a clean clone; `check.py --url` passes against Render | All | `docs/INTEGRATION_CHECKLIST.md`, section 7 |
@@ -88,13 +88,13 @@ The free tier allows about **500 requests a day** to Gemini Flash-Lite; Render r
 |---|---|---|
 | Target eligible ratings | 150 | This protocol |
 | Requests needed (10% margin for errors, out-of-scope typos and unrated orders) | about 165 | Assumption |
-| Gemini calls per request | *k*, at most 3 | WP3 design (to confirm with the real agent) |
+| Gemini calls per request | *k*: 1 for a low-risk order, 3 otherwise; about 1.8 on average with the 30 scenarios (18 low risk) | WP3 (`docs/WP3_AGENT.md`) |
 | Retries (429, timeouts) | up to 10% extra calls | Assumption, to confirm with WP3's client |
-| **Campaign calls** | 165 × *k* × 1.1 ≈ **182 (k = 1) to 545 (k = 3)** | Formula |
+| **Campaign calls** | 165 × *k* × 1.1 ≈ **182 (k = 1) to 545 (k = 3)**; about **330 with k ≈ 1.8** | Formula |
 | Reserve kept every day | 100 calls (check.py, professor, demo, evaluation re-runs) | Decision |
 | Campaign calls allowed per day | 400 − 100 = **300** | Formula |
 
-So with *k* = 1 the campaign fits in one day; with *k* = 3 it needs two days (for example Saturday and Sunday morning). The evaluation (WP4) uses its own quota and is planned separately. Before starting, WP3 confirms *k* and the retry policy, and Manuela approves the number of days.
+So with *k* = 1 the campaign would fit in one day; with the measured mix (*k* ≈ 1.8, about 330 calls) it needs two days (for example Saturday and Sunday morning). The evaluation (WP4) uses its own quota and is planned separately. Before starting, WP3 confirms *k* and the retry policy, and Manuela approves the number of days.
 
 ## 9. Stopping rules (fixed now)
 

@@ -116,6 +116,8 @@ Monte Carlo error is about ±1 point (600 intervals per cell).
 
 ## Safety: what is guaranteed and what WP3 must guarantee
 
+**Status (28 Nov 2026).** WP3's agent (PR #12, `agent-v1`) implements points 1–3 below: the decision calls never see the style and the guardrails reject a draft that differs from the arm-free decision. Checked offline with a simulated Gemini (`tests/test_agent.py`, 26/26; this file's tests 41/41). Not yet checked with real Gemini answers. The original requirement is kept below for the record.
+
 Guaranteed today, by construction: the arm never reaches component A or `guardrails.finalise()`. So the risk assessment and the deterministic review rules (critical risk, out of training range, uncertain prediction, failed grounding) cannot change with the style. A test with an adversarial fake agent, which writes a different order for each style, confirms it.
 
 **Not yet guaranteed (requirement for WP3).** The *action*, *priority* and the agent's own review request come from the LLM draft. A real LLM could change them depending on the writing style. Proposed fix, in WP3's files:
