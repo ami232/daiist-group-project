@@ -6,7 +6,10 @@ REPORT.md: how many false alarms on normal inputs you accept, and how big a
 shift has to be before it matters for your product.
 """
 
+import re
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -21,6 +24,14 @@ NOISE_MULTIPLE = 5     # WP5: ...and this many times the PSI expected by chance 
 WINDOW = 100           # the drift check looks at the last WINDOW requests...
 MIN_WINDOW = 20        # ...and stays silent with fewer than this
 THUMBS_DOWN_ALERT = 0.4  # PLACEHOLDER: alert when this share of rated requests is 👎
+
+# WP5 operations alerts (see docs/WP5_OPERATIONS.md for the reasoning)
+BUDGET_ALERT = 0.8       # alert when today's Gemini requests exceed this share of the daily budget
+DEGRADED_WINDOW = 50     # degraded-mode share is measured on the last N requests that should have used the LLM...
+DEGRADED_ALERT = 0.2     # ...and alerts above this share...
+MIN_DEGRADED = 10        # ...with at least this many (it must react fast: a spent quota degrades every request)
+REVIEW_ALERT = 0.5       # alert when this share of the last WINDOW requests is sent to review (validation: ~4%; feedback campaign mix: 30%)
+BUDGET_TZ = ZoneInfo("America/Los_Angeles")  # the Gemini daily quota resets on Pacific time
 
 
 def _bin(values: np.ndarray, reference: np.ndarray, bins: int) -> np.ndarray:
@@ -127,9 +138,111 @@ def summary(logs: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"metric": list(rows), "value": [str(v) for v in rows.values()]})
 
 
+_STUB = re.compile(r"(^|\|)stub", re.IGNORECASE)
+
+
+def real_traffic(logs: pd.DataFrame) -> pd.DataFrame:
+    """Requests that count as evidence: source `real` (or not recorded) and no stub component.
+
+    Smoke tests, check runs, simulations (`source` other than `real`) and stub versions
+    (`stub-...`) are left out of the quality, drift and operations numbers.
+    """
+    if logs.empty:
+        return logs
+    keep = pd.Series(True, index=logs.index)
+    if "source" in logs:
+        keep &= logs["source"].fillna("real").astype(str).str.lower().eq("real")
+    if "versions" in logs:
+        keep &= ~logs["versions"].map(lambda v: isinstance(v, dict) and any(_STUB.search(str(x)) for x in v.values()))
+    return logs[keep]
+
+
+def _col(df: pd.DataFrame, name: str, default):
+    return df[name] if name in df else pd.Series([default] * len(df), index=df.index)
+
+
+def _live(df: pd.DataFrame) -> pd.DataFrame:
+    """Requests that went to Gemini for real: served (not refused) and not answered from the cache."""
+    if df.empty:
+        return df
+    ok = _col(df, "status", "ok").fillna("ok").astype(str).eq("ok")
+    calls = pd.to_numeric(_col(df, "llm_calls", 0), errors="coerce").fillna(0) > 0
+    cached = _col(df, "cache_hit", False).fillna(False).astype(bool)
+    return df[ok & calls & ~cached]
+
+
+def _usage(df: pd.DataFrame, field: str) -> int:
+    return int(sum((u.get(field, 0) or 0) for u in _col(df, "llm", None) if isinstance(u, dict)))
+
+
+def budget_today(logs: pd.DataFrame) -> tuple[int, int] | None:
+    """(Gemini requests used today, daily budget) from the latest log that recorded it, or None.
+
+    Uses every log (also tests) because the quota is shared; only a record of the current
+    Pacific-time day counts, an older one is a different day's quota."""
+    if logs.empty or "llm_budget" not in logs:
+        return None
+    today = datetime.now(BUDGET_TZ).date().isoformat()
+    for budget in reversed(logs["llm_budget"].tolist()):
+        if isinstance(budget, dict) and str(budget.get("day")) == today and budget.get("limit"):
+            return int(budget["used"]), int(budget["limit"])
+    return None
+
+
+def operations(logs: pd.DataFrame) -> pd.DataFrame:
+    """Cost, tokens, latency, degradation and quota of the real traffic, as metric / value rows."""
+    real = real_traffic(logs)
+    live = _live(real)
+    served = real[_col(real, "status", "ok").fillna("ok").astype(str).eq("ok")] if not real.empty else real
+    recent = live.tail(DEGRADED_WINDOW)
+    degraded = _col(recent, "degraded", False).fillna(False).astype(bool)
+    limited = _col(live, "rate_limited", False).fillna(False).astype(bool)
+    budget = budget_today(logs)
+
+    def pct(series: pd.Series, q: float) -> str:
+        return f"{float(series.quantile(q)):.2f}" if len(series) else "-"
+
+    rows = {
+        "real requests (excluding stubs and tests)": len(real),
+        "requests that called Gemini (no cache)": len(live),
+        "tokens in / out / thinking": f"{_usage(live, 'tokens_in')} / {_usage(live, 'tokens_out')} / {_usage(live, 'tokens_thinking')}" if len(live) else "-",
+        "mean cost per Gemini request (€)": f"{float(live['cost_eur'].mean()):.5f}" if len(live) else "-",
+        "latency p50 / p95 (s), all served": f"{pct(served['latency_s'], 0.5)} / {pct(served['latency_s'], 0.95)}" if len(served) else "-",
+        "latency p50 / p95 (s), Gemini requests": f"{pct(live['latency_s'], 0.5)} / {pct(live['latency_s'], 0.95)}" if len(live) else "-",
+        f"degraded mode, last {len(recent)} Gemini requests": f"{degraded.mean():.0%} ({int(degraded.sum())} of {len(recent)})" if len(recent) else "-",
+        "rate limited (429) requests": f"{int(limited.sum())} of {len(live)}" if len(live) else "-",
+        "retries": int(pd.to_numeric(_col(live, "retries", 0), errors="coerce").fillna(0).sum()),
+        "Gemini requests today / budget": f"{budget[0]} / {budget[1]} ({budget[0] / budget[1]:.0%})" if budget else "-",
+    }
+    return pd.DataFrame({"metric": list(rows), "value": [str(v) for v in rows.values()]})
+
+
+def quality_counts(logs: pd.DataFrame, freq: str = "h") -> pd.DataFrame:
+    """Denominators behind `quality`: per period, requests, sent to review, rated and 👎 (real traffic only)."""
+    real = real_traffic(logs)
+    columns = ["time", "requests", "sent to review", "rated", "thumbs down"]
+    if real.empty:
+        return pd.DataFrame(columns=columns)
+    df = real.set_index("timestamp")
+    rated = df["feedback"].dropna().astype(float)
+    table = pd.DataFrame({
+        "requests": df["review"].resample(freq).size(),
+        "sent to review": df["review"].astype(float).resample(freq).sum(),
+        "rated": rated.resample(freq).size(),
+        "thumbs down": (rated < 0).astype(float).resample(freq).sum(),
+    }).fillna(0).astype(int)
+    return table[table["requests"] > 0].reset_index(names="time")[columns]
+
+
+
 def alerts(logs: pd.DataFrame, reference: pd.DataFrame | None) -> list[str]:
-    """The alert rules. Each fired alert is one message."""
+    """The alert rules. Each fired alert is one message.
+
+    Drift, quality and degradation use real traffic only (see `real_traffic`); the quota
+    alert uses every log, because tests spend the same Gemini quota."""
     fired = []
+    budget = budget_today(logs)
+    logs = real_traffic(logs)
     window = logs.tail(WINDOW)
     if reference is not None and len(window) >= MIN_WINDOW:
         report = drift(reference, live_features(window))
@@ -138,4 +251,13 @@ def alerts(logs: pd.DataFrame, reference: pd.DataFrame | None) -> list[str]:
     rated = window["feedback"].dropna().astype(float) if not window.empty else pd.Series(dtype=float)
     if len(rated) >= MIN_WINDOW and (rated < 0).mean() > THUMBS_DOWN_ALERT:
         fired.append(f"{(rated < 0).mean():.0%} of the last {len(rated)} rated requests are 👎 (> {THUMBS_DOWN_ALERT:.0%}).")
+    if len(window) >= MIN_WINDOW and window["review"].astype(float).mean() > REVIEW_ALERT:
+        fired.append(f"{window['review'].astype(float).mean():.0%} of the last {len(window)} requests were sent to human review (> {REVIEW_ALERT:.0%}).")
+    if budget and budget[0] > BUDGET_ALERT * budget[1]:
+        fired.append(f"Gemini quota: {budget[0]} of {budget[1]} requests used today ({budget[0] / budget[1]:.0%} > {BUDGET_ALERT:.0%}).")
+    recent = _live(logs).tail(DEGRADED_WINDOW)
+    if len(recent) >= MIN_DEGRADED:
+        share = _col(recent, "degraded", False).fillna(False).astype(bool).mean()
+        if share > DEGRADED_ALERT:
+            fired.append(f"Degraded mode in {share:.0%} of the last {len(recent)} Gemini requests (> {DEGRADED_ALERT:.0%}).")
     return fired
