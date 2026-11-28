@@ -34,7 +34,8 @@ Owner: Manuela. Status: initial implementation done against the stub components.
 - **Monitoring tab.**
   - KPI tiles, alerts with severity and the rules applied.
   - Charts of requests per period, quality signals, latency, outcome mix and risk bands.
-  - PSI per feature against its threshold.
+  - PSI per feature against its threshold (real traffic only).
+  - An Operations card with WP5's `monitor.operations()` table (cost, tokens, latency p50/p95, degraded share, quota).
   - The Adaptive Intelligence (RL) section, built in WP6 (`ui/rl_dashboard.py`, see `docs/WP6_BANDIT.md`).
   - An empty state for every section when there is not enough data.
   - A "Provisional data" banner that counts the stub records.
@@ -50,6 +51,22 @@ Owner: Manuela. Status: initial implementation done against the stub components.
   - Six parallel `gradio_client` calls succeed.
 - **Adaptive Intelligence.** A data-label legend (Real logs, Simulated, Assumption, Pending), new KPIs (response rate, reward delay, sessions, changed or very fast ratings) and new cards: served probabilities, coverage by style, observed reward vs belief vs selection, feedback loop and non-response. The simulation section adds interval calibration. New CSS: `.mai-provenance`, `.mai-num--warn`.
 
+## WP5 monitoring integration (2026-11-28)
+
+Patch written by Beatriz (WP5) and applied unchanged; review, adjustments and integration by Manuela (WP7).
+
+- **Real traffic only in drift.** The drift panel and the "Waiting" notice under Alerts count `monitor.real_traffic(logs)`, the same requests the drift alert uses. Smoke tests, check runs, simulations and stub versions are left out. With 30 stub and 10 real requests the notice reads "10 so far", not 40.
+- **Operations card.** It shows the `monitor.operations()` table: real requests, Gemini requests without the cache, tokens, mean cost, p50/p95 latency, degraded share, 429s, retries and today's quota. A footnote gives the real-traffic denominators (requests, rated, negative). The quota line counts every request, because tests spend the same Gemini quota.
+- **Alert rules.** The footnote under Alerts now also lists the review (> 50% of the last 100, at least 20), quota (> 80% of the daily budget) and degraded (> 20% of the last 50 Gemini requests, at least 10) rules.
+- **Thresholds footnote.** It says the drift rule is calibrated on validation data (`docs/WP5_DRIFT.md`) and the operational ones are stated assumptions (`docs/WP5_OPERATIONS.md`).
+- **Review adjustments (Manuela).** (1) The Operations footnote first said the "Quality signals" were real traffic only. The Quality chart and the KPI tiles still use all logs, so the footnote now gives just the real-traffic counts and the quota exception. (2) The minimum number of requests is now written in the review and degraded rules.
+- **Still on all logs (on purpose).** The KPI tiles, requests over time, quality signals, latency and outcome mix show every logged request. The "Provisional data" banner counts the stub ones.
+- **Checked.**
+  - `tests/test_monitor.py` passes 22/22, including the patch's two dashboard tests.
+  - The page renders with no data, with no reference set, with low traffic (stubs and 10 real requests), with stubs only and with 120 real requests.
+  - The new cards were viewed at 1280 px and 375 px with synthetic logs in a temporary folder (no PostgreSQL, no Gemini), and the Operations table fits the 375 px screen.
+- **Known, earlier than this patch.** The screen-reader-only tables of the RL simulation charts (`.mai-sr`) are wider than a 375 px screen. Nothing shows and the page does not scroll sideways (`overflow-x: hidden`). It is noted for a later CSS fix.
+
 ## Tests (local, stub components, no Gemini calls)
 
 - The app starts. Through `gradio_client`, the only public endpoint is `/run`. It returns a result for a critical reading and refuses non-JSON input as out of scope.
@@ -64,8 +81,7 @@ Owner: Manuela. Status: initial implementation done against the stub components.
 - **Integration.**
   - Real outputs of WP1 and WP3: the "Stub output" badges and the degraded-mode banner disappear on their own when the versions no longer contain `stub`.
   - WP6 posterior chart in the RL panel.
-  - `monitoring_ui.render()` from WP5, if WP5 builds its own view.
-  - A p95 latency KPI once WP5 adds it to `monitor.summary()`.
+  - WP5 monitoring: integrated on 28 Nov (section above). The p95 latency is in the Operations card.
 - **Coupling with WP5.** The dashboard reads the metric and signal names of `monitor.py`. If WP5 renames them, update the two label maps in `ui/dashboard.py`.
 - **Feedback reason.** A reason for a 👎 cannot be stored without changing `logbook.py`, which is a fixed template file.
 - **Charts waiting for data.** The drift, requests-over-time and quality charts show their empty states until there is a drift reference and more than one hour of logs.

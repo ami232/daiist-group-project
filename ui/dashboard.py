@@ -177,9 +177,9 @@ def _alerts_panel(logs: pd.DataFrame, reference: pd.DataFrame | None) -> str:
                     for s, label, text in rows)
     rules = (f'Drift: PSI &gt; max({monitor.PSI_ALERT}, {monitor.NOISE_MULTIPLE} × chance level) over the last {monitor.WINDOW} requests · '
              f'Feedback: more than {monitor.THUMBS_DOWN_ALERT:.0%} negative among at least {monitor.MIN_WINDOW} rated · '
-             f'Review: more than {monitor.REVIEW_ALERT:.0%} of the last {monitor.WINDOW} sent to human review · '
+             f'Review: more than {monitor.REVIEW_ALERT:.0%} of the last {monitor.WINDOW} sent to human review (at least {monitor.MIN_WINDOW} requests) · '
              f'Quota: more than {monitor.BUDGET_ALERT:.0%} of the daily Gemini budget · '
-             f'Degraded: more than {monitor.DEGRADED_ALERT:.0%} of the last {monitor.DEGRADED_WINDOW} Gemini requests')
+             f'Degraded: more than {monitor.DEGRADED_ALERT:.0%} of the last {monitor.DEGRADED_WINDOW} Gemini requests (at least {monitor.MIN_DEGRADED})')
     return _card("Alerts", "bell", f'<ul class="mai-alerts">{items}</ul><p class="mai-footnote">Rules: {rules}.</p>',
                  hint=f"{len(fired)} active")
 
@@ -239,8 +239,8 @@ def _operations_panel(logs: pd.DataFrame) -> str:
     total = int(counts["requests"].sum()) if not counts.empty else 0
     rated = int(counts["rated"].sum()) if not counts.empty else 0
     down = int(counts["thumbs down"].sum()) if not counts.empty else 0
-    note = (f'<p class="mai-footnote">Quality signals are shares of real requests: {total} requests, '
-            f'{rated} rated, {down} negative. Stub and test requests are excluded.</p>')
+    note = (f'<p class="mai-footnote">Real traffic: {total} requests, {rated} rated, {down} negative. Stub and test requests '
+            f'are excluded, except from the quota line: tests spend the same Gemini quota.</p>')
     body = f'<table class="mai-table"><caption class="mai-sr">Operations</caption><tbody>{rows}</tbody></table>{note}'
     return _card("Operations", "coins", body, hint="Real traffic, monitor.operations()")
 
