@@ -15,8 +15,9 @@ ROOT = Path(__file__).resolve().parent
 REFERENCE_FILE = ROOT / "monitoring" / "reference_features.csv"
 
 PSI_BINS = 5           # quantile bins of the reference; few, because samples are small
-PSI_ALERT = 0.25       # PLACEHOLDER: alert when a feature's PSI exceeds this...
-NOISE_MULTIPLE = 2     # ...and this many times the PSI expected by chance (psi_noise)
+SMOOTHING = 0.5        # WP5: pseudo-count added to every bin (Laplace-style), so an empty bin in a small window does not blow up the PSI
+PSI_ALERT = 0.25       # WP5: alert when a feature's PSI exceeds this...
+NOISE_MULTIPLE = 5     # WP5: ...and this many times the PSI expected by chance (psi_noise). Calibrated on validation: eval/drift_calibration.py
 WINDOW = 100           # the drift check looks at the last WINDOW requests...
 MIN_WINDOW = 20        # ...and stays silent with fewer than this
 THUMBS_DOWN_ALERT = 0.4  # PLACEHOLDER: alert when this share of rated requests is 👎
@@ -38,7 +39,7 @@ def _bin(values: np.ndarray, reference: np.ndarray, bins: int) -> np.ndarray:
     return np.searchsorted(edges, values, side="right")
 
 
-def psi(reference, current, bins: int = PSI_BINS) -> float:
+def psi(reference, current, bins: int = PSI_BINS, smoothing: float = SMOOTHING) -> float:
     """Population stability index of `current` against `reference`.
 
     0 means the same distribution; the usual rule of thumb is < 0.1 stable,
@@ -51,9 +52,10 @@ def psi(reference, current, bins: int = PSI_BINS) -> float:
         return float("nan")
     ref_bins, cur_bins = _bin(reference, reference, bins), _bin(current, reference, bins)
     n_bins = max(ref_bins.max(), cur_bins.max()) + 1
-    expected = np.bincount(ref_bins, minlength=n_bins) / len(reference)
-    actual = np.bincount(cur_bins, minlength=n_bins) / len(current)
-    expected, actual = np.clip(expected, 1e-4, None), np.clip(actual, 1e-4, None)
+    # Additive smoothing instead of clipping at 1e-4: with 16-60 values a single empty bin
+    # would otherwise add about 1.5 to the PSI on its own (see eval/drift_calibration.py).
+    expected = (np.bincount(ref_bins, minlength=n_bins) + smoothing) / (len(reference) + smoothing * n_bins)
+    actual = (np.bincount(cur_bins, minlength=n_bins) + smoothing) / (len(current) + smoothing * n_bins)
     return float(np.sum((actual - expected) * np.log(actual / expected)))
 
 
