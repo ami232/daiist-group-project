@@ -439,6 +439,8 @@ The final economic comparison against the main baseline, plant-level extrapolati
 
 **Deployment (25 Nov 2026).** The app runs on Render's free plan at https://maintai-238a.onrender.com, created from `render.yaml` as a Blueprint: one web service and one free PostgreSQL database for the logs, connected through `DATABASE_URL`. `GEMINI_API_KEY` is stored only in the service's environment variables. On Render, `LLM_CACHE=off`, so live requests never come from the LLM cache, and `DAILY_LLM_BUDGET=400` keeps a margin below the free tier's 500 requests a day.
 
+**Memory and CPU.** The service has 512 MB of RAM and 0.15 CPU. Production use could not be measured: Render shows the Metrics charts only on paid plans. As complementary evidence, local peak memory is about 210 MB for the app with the bandit and an estimated 315 MB with the Gemini client (development machine, not production), below the 512 MB limit.
+
 **Records excluded from analysis.** The first deployment still used stub components. The 3 requests and 2 👍 logged on 25 Nov 2026 were smoke tests of the deployment (confirmed in the PostgreSQL export of 27 Nov 2026). They are not evidence for the evaluation or for the bandit's learning. They can be identified by their versions, which start with `stub-` (for example `component_a = stub-a-v0`), and every analysis and the bandit exclude records with stub versions.
 
 ## Failures
