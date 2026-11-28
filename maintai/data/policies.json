@@ -1,0 +1,18 @@
+{
+  "_label": "SIMULATED DATA. Invented maintenance policies for a fictional plant. Not real safety procedures.",
+  "general": ["Every P1 order needs approval by the maintenance supervisor."],
+  "by_failure_mode": {
+    "TWF": ["Tool wear risk: replace the cutting tool at the planned window; record the wear reading in the order."],
+    "HDF": ["Heat dissipation risk: check the cooling system before restarting."],
+    "PWF": ["Power risk: check the spindle drive and fuses before restarting."],
+    "OSF": ["Overstrain risk: reduce the load until the tool has been inspected."],
+    "RNF": ["Random failures cannot be predicted from the readings: monitor and keep a person in the loop."],
+    "none": []
+  },
+  "by_risk_band": {
+    "low": [],
+    "medium": [],
+    "high": ["High risk: act within the current shift."],
+    "critical": ["Critical risk: a person must review the order before any action."]
+  }
+}

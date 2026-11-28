@@ -53,6 +53,7 @@ REVIEW_REASONS = {
     "uncertain_prediction": "Prediction close to the decision threshold",
     "failed_validation": "The order failed a grounding check",
     "agent_requested": "The agent asked for a review",
+    "part_out_of_stock": "A chosen spare part is out of stock",
 }
 
 OUT_OF_SCOPE = {
@@ -86,6 +87,7 @@ def _badge(text: str, tone: str = "neutral", icon_name: str | None = None) -> st
 
 
 def _eur(value: float, decimals: int = 0) -> str:
+    value = round(float(value), decimals)  # so a tiny negative amount shows as €0, not −€0
     sign = "−" if value < 0 else ""
     return f"{sign}€{abs(value):,.{decimals}f}"
 
@@ -357,6 +359,7 @@ def _risk_card(risk: dict, stub: bool) -> str:
              (_badge("Near threshold", "warning", "info") if risk.get("in_uncertainty_band") else "") + \
              "".join(_badge(f, "warning", "alert") for f in risk.get("ood_flags", []))
     position = "above" if p >= threshold else "below"
+    break_even = economics.break_even_probability(economics.DEFAULT)
     return f"""
 <section class="mai-card" aria-labelledby="mai-risk-title">
   {section_title("Risk intelligence", "pulse", right=badges).replace('<h2 class="mai-h2">', '<h2 class="mai-h2" id="mai-risk-title">')}
@@ -365,12 +368,16 @@ def _risk_card(risk: dict, stub: bool) -> str:
     <div class="mai-risk__side">
       <div class="mai-risk__band">{_badge(label + " risk", tone)}</div>
       <p class="mai-body">The probability is <strong>{position}</strong> the decision threshold of
-      <strong>{threshold:.1%}</strong>, the point where intervening costs less than the expected breakdown.</p>
+      <strong>{threshold:.1%}</strong>, chosen on validation data to minimise the expected cost, reviews included.
+      It is not the economic break-even ({break_even:.1%} in the simplified cost model).</p>
       <p class="mai-footnote">Model {_e(risk.get("model_version", ""))}</p>
     </div>
   </div>
-  <h3 class="mai-h3">Likely failure modes</h3>
+  <h3 class="mai-h3">Failure-mode probabilities</h3>
   {charts.bar_rows(mode_rows) if mode_rows else '<p class="mai-subtle">No failure mode reported.</p>'}
+  {'<p class="mai-footnote">Each bar comes from its own model: the probability that this failure mode occurs. They are '
+   'independent, not shares of one total, so they need not add up to 100%. Random failures (RNF) cannot be predicted '
+   'and are not shown.</p>' if mode_rows else ''}
 </section>"""
 
 

@@ -1,0 +1,10 @@
+{
+  "_label": "SIMULATED DATA. Invented for the MaintAI project. Not a real inventory, supplier list or price list.",
+  "parts": [
+    {"part_id": "P-TW-001", "name": "Cutting tool insert", "failure_modes": ["TWF", "OSF"], "compatible_types": ["L", "M", "H"], "in_stock": 12, "lead_time_days": 0, "unit_cost_eur": 45.0},
+    {"part_id": "P-TW-002", "name": "Heavy-duty cutting tool insert", "failure_modes": ["TWF", "OSF"], "compatible_types": ["M", "H"], "in_stock": 4, "lead_time_days": 0, "unit_cost_eur": 70.0},
+    {"part_id": "P-CL-010", "name": "Coolant pump seal kit", "failure_modes": ["HDF"], "compatible_types": ["L", "M", "H"], "in_stock": 2, "lead_time_days": 1, "unit_cost_eur": 120.0},
+    {"part_id": "P-CL-011", "name": "Coolant pump (complete unit)", "failure_modes": ["HDF"], "compatible_types": ["L", "M", "H"], "in_stock": 0, "lead_time_days": 5, "unit_cost_eur": 640.0},
+    {"part_id": "P-PW-020", "name": "Spindle drive fuse set", "failure_modes": ["PWF"], "compatible_types": ["L", "M", "H"], "in_stock": 5, "lead_time_days": 0, "unit_cost_eur": 60.0}
+  ]
+}

@@ -24,8 +24,8 @@ Owner: Manuela. Status: initial implementation done against the stub components.
 - **App tab: states.** Empty (no invented results), loading, missing values, out of scope (no model is called), service error, degraded mode, and development build.
 - **App tab: results.**
   - Executive summary.
-  - Semicircular probability gauge with the decision threshold marked.
-  - Bars for the likely failure modes.
+  - Semicircular probability gauge with the decision threshold marked. The text explains that the threshold (chosen on validation with the full cost model) is not the simplified break-even probability from economics.py.
+  - Bars for the failure-mode probabilities. Each comes from its own classifier (WP1), so they are independent and need not add up to 100%; the card says so.
   - Physical indicators drawn against the failure rules of the synthetic AI4I 2020 dataset. These are labelled as dataset rules, not universal industrial limits.
   - Work order: priority, procedure, justification, window, parts with stock, policy notes.
   - Financial insight: expected cost without action vs with the order (intervention, residual risk, human review, AI cost). Assumed costs and token-based costs are labelled separately. The figures are computed with the same formula as `economics.outcome_cost`.
