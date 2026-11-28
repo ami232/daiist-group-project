@@ -424,7 +424,18 @@ The final economic comparison against the main baseline, plant-level extrapolati
 
 ## Operations
 
-*What you log. The quality signal and the drift check you monitor, the reference set, and the alert threshold with its justification. The drift demo: what you shifted, and the result with the alert firing (screenshot or numbers). The rate of false alarms on normal inputs.*
+**What is logged and monitored.** Each request stores its features, both component outputs, model and prompt versions, latency, tokens, cost and arm; ratings are linked by request id. Monitoring counts real traffic only (no stub versions or test sources; cache hits are not Gemini requests) and shows the review and 👎 rates with their denominators, latency p50/p95, tokens, cost, degraded-mode share, 429 errors and the daily quota.
+
+**Drift.** PSI on nine features (the five inputs, temperature difference, power, product type and `p_fail`) against 300 normal training inputs (`eval/reference.csv`, none from `cases.csv`). The template rule raised false alarms on 31–47% of normal windows of 16–20 requests. We calibrated it on validation windows only (200 random windows per size): additive smoothing, and an alert only above five times the PSI expected by chance.
+
+| Rule | False alarms, windows of 16 / 20 / 50 / 100 | Detection of shifted windows |
+|---|---|---|
+| Template | 31% / 47% / 12% / 1% | 100% |
+| Chosen (smoothing, x5) | 0% / 0% / 0.5% / 0.5% | 99.5–100% |
+
+**Drift demo.** `eval/shifted.csv` has 15 validation inputs with air temperature +6 K, process temperature +7 K and tool wear +90 min. Result: quiet on the 16 normal cases; alert on air temperature (PSI 2.21), process temperature (2.33) and `p_fail` (1.51).
+
+**Other alerts and limits.** Quota above 80% of the daily budget; degraded mode in over 20% of the last 50 Gemini requests; over 50% of requests sent to human review (about 4% on validation-like inputs). The shifted set is synthetic; these thresholds are reasoned from validation rates and the quota, not tuned on live traffic; the 👎 alert is not calibrated. Live numbers from the feedback campaign are still to be added. Details: `docs/WP5_DRIFT.md`, `docs/WP5_OPERATIONS.md`.
 
 **Deployment (25 Nov 2026).** The app runs on Render's free plan at https://maintai-238a.onrender.com, created from `render.yaml` as a Blueprint: one web service and one free PostgreSQL database for the logs, connected through `DATABASE_URL`. `GEMINI_API_KEY` is stored only in the service's environment variables. On Render, `LLM_CACHE=off`, so live requests never come from the LLM cache, and `DAILY_LLM_BUDGET=400` keeps a margin below the free tier's 500 requests a day.
 
