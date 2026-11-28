@@ -1,1 +1,21 @@
 id,label,comment
+c08,1,It passes.
+c01,1,It passes because addresses HDF; part P-CL-010 and supervisor rule come from tools; review first
+c28,1,"numbers ok, but does not warn that rpm is out of training range"
+c21,1,"It works because it addresses OSF with the right action (reduce load), uses part P-TW-001 from the tools and asks for supervisor approval"
+c11,1,"It works because the risk is low, monitoring fits, and the numbers (62 min wear, 0.17%) come from the reading and risk"
+c06,1,"numbers and part come from reading/tools, review before work; small error: calls 8.5 K ""elevated"""
+c22,0,"invents 4.0x and 2.0 h, no tool data; step 1 not needed at low risk"
+c14,1,"low risk, monitor fits; 278.4 = 8 x 34.8 and 12000 is the type M strain limit from component A"
+c02,1,"numbers are correct (power and strain from the reading), part from tools; minor: step 1 before approval"
+c18,0,"invents 1.5x and 2.0 h, no tool data; ignores 233 min wear and the review"
+c32,0,steps too vague; ignores OSF 97% and the review at critical risk
+c23,1,"low risk, monitor fits, numbers from reading/risk; does not mention power is near 9000 W"
+c24,1,"consistent with low risk from the model; but strain is ~98% of the M limit and wear 201 min, risk may be underestimated"
+c34,1,short but ok for low risk; does not warn that temperatures are below training range
+c15,1,"numbers correct (716 = 20 x 35.8, 10.6 K from reading), low risk; minor: step 1 talks of a failure mode that is not there"
+c31,0,"reading is impossible (process colder than air, likely sensor fault) but says keep normal operation"
+c04,1,"numbers correct (12251.6 = 218 x 56.2 > 11000 limit), part from tools, review before action, clear steps"
+c20,1,"approval first, steps follow the PWF policy, part from tools, no invented numbers"
+c33,0,steps too vague; ignores OSF 97% and HDF 86%; no approval step at 100% risk
+c05,1,"approval first, reduce load as the OSF policy says, part from tools; minor: review repeated at the end"

@@ -1,0 +1,17 @@
+{
+ "call": "write",
+ "created": "2026-11-28",
+ "format": "llm-cache-v1",
+ "model": "gemini-3.5-flash-lite",
+ "output": {
+  "function_calls": [],
+  "text": "{\"steps\": [\"Measure the mechanical power of 9591.3 W and check the spindle drive fuses.\", \"Submit the order for review by the maintenance supervisor because critical risk requires a person to review the order before any action.\", \"Replace the spindle drive fuse set using part id P-PW-020.\", \"Verify the mechanical power and spindle drive status after the work.\"], \"justification\": \"The failure probability of 99.76 % and the failure mode PWF indicate an electrical or power issue requiring immediate action. The decision mandates a power check and a human review before proceeding. Therefore, the work order starts with a diagnostic check of the mechanical power of 9591.3 W, followed by supervisor review, fuse replacement, and final verification.\"}"
+ },
+ "prompt_version": "agent-v1",
+ "style": "root_cause",
+ "usage": {
+  "tokens_in": 1591,
+  "tokens_out": 161,
+  "tokens_thinking": 0
+ }
+}

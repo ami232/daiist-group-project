@@ -19,7 +19,7 @@
       "cases": 10,
       "correct": 0.8,
       "sent_to_review": 0.4,
-      "median_latency_s": 0.361,
+      "median_latency_s": 0.008,
       "mean_cost_eur": 0.0
     },
     {
@@ -43,7 +43,7 @@
       "cases": 8,
       "correct": 1.0,
       "sent_to_review": 1.0,
-      "median_latency_s": 0.34,
+      "median_latency_s": 0.956,
       "mean_cost_eur": 0.001
     }
   ],
@@ -66,7 +66,7 @@
     "main_baseline": "B2",
     "B1_rule": "intervene when tool wear >= 205 min",
     "B2_rule": "intervene if tool wear >= 207 min or torque >= 60.5 Nm or temperature difference <= 8.6 K",
-    "llm_eur_per_request_used": 0.000213,
+    "llm_eur_per_request_used": 0.000205,
     "policies": {
       "B0": {
         "cost_per_1000_eur": 136000.0,
@@ -126,13 +126,13 @@
     "rubric": "judge-rubric-v1",
     "key_available": true,
     "graded": 68,
-    "calls_this_run": 11,
-    "tokens_this_run": 11273,
-    "agent_pass_rate": 0.618,
+    "calls_this_run": 6,
+    "tokens_this_run": 7038,
+    "agent_pass_rate": 0.588,
     "agent_R1_addresses_risk": 1.0,
-    "agent_R2_actionable": 0.912,
-    "agent_R3_faithful": 0.676,
-    "agent_R4_safe_consistent": 0.971,
+    "agent_R2_actionable": 1.0,
+    "agent_R3_faithful": 0.647,
+    "agent_R4_safe_consistent": 0.941,
     "template_pass_rate": 0.618,
     "template_R1_addresses_risk": 1.0,
     "template_R2_actionable": 0.618,
@@ -140,19 +140,27 @@
     "template_R4_safe_consistent": 0.971
   },
   "human_agreement": {
-    "labels": 0,
-    "compared": 0
+    "labels": 20,
+    "compared": 20,
+    "agreement": 0.9,
+    "cohen_kappa": 0.765,
+    "human_pass_rate": 0.75,
+    "judge_pass_rate": 0.65,
+    "disagreements": [
+      "c21",
+      "c34"
+    ]
   },
   "operations": {
     "latency_p50_s": 0.008,
-    "latency_p95_s": 1.524,
-    "tokens_per_request_mean": 482.4,
-    "eur_per_request_mean": 0.000213,
-    "eur_per_request_max": 0.002542,
-    "requests_with_llm_calls": 9,
-    "degraded_share": 0.147,
-    "run_cost_eur": 0.0072,
-    "run_tokens": 16400
+    "latency_p95_s": 1.622,
+    "tokens_per_request_mean": 423.8,
+    "eur_per_request_mean": 0.000205,
+    "eur_per_request_max": 0.002515,
+    "requests_with_llm_calls": 5,
+    "degraded_share": 0.0,
+    "run_cost_eur": 0.007,
+    "run_tokens": 14410
   },
   "errors_by_cause": {
     "component A: risk on the wrong side of the threshold": 2
@@ -180,10 +188,10 @@
       "target": "none"
     },
     "5_quality": {
-      "agent_pass": 0.618,
+      "agent_pass": 0.588,
       "template_pass": 0.618,
-      "kappa": null,
-      "human_labels": 0,
+      "kappa": 0.765,
+      "human_labels": 20,
       "target": "agent pass >= 0.80 and above the template, kappa >= 0.6 on >= 20 labels"
     },
     "6_out_of_scope": {
@@ -191,8 +199,8 @@
       "target": "all"
     },
     "7_operations": {
-      "p95_s": 1.524,
-      "eur_per_request": 0.000213,
+      "p95_s": 1.622,
+      "eur_per_request": 0.000205,
       "target": "p95 < 15 s and < \u20ac0.01 per request"
     }
   }
