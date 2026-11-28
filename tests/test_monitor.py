@@ -9,6 +9,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import monitor  # noqa: E402
+from ui import dashboard  # noqa: E402
 
 rng = np.random.default_rng(0)
 ref = pd.DataFrame({"x": rng.normal(0, 1, 300), "t": rng.integers(0, 3, 300).astype(float)})
@@ -60,6 +61,8 @@ results = [
     check("operations: tokens summed", (lambda t: t["tokens in / out / thinking"] == "20000 / 4000 / 1000")(dict(monitor.operations(make_logs(20)).values))),
     check("operations: quota line", (lambda t: t["Gemini requests today / budget"] == "10 / 400 (2%)")(dict(monitor.operations(make_logs(20)).values))),
     check("quality_counts denominators add up", int(monitor.quality_counts(make_logs(20, review=0.25))["requests"].sum()) == 20 and int(monitor.quality_counts(make_logs(20, review=0.25))["sent to review"].sum()) == 5),
+    check("dashboard drift panel ignores stub requests", "5 of 20" in dashboard._drift_panel(pd.concat([make_logs(15, stub=True), make_logs(5)], ignore_index=True), ref)),
+    check("dashboard operations card renders the table", "Gemini requests today" in dashboard._operations_panel(make_logs(20))),
 ]
 print(f"{sum(results)}/{len(results)} passed")
 sys.exit(0 if all(results) else 1)

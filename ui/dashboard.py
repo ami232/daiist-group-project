@@ -149,19 +149,20 @@ def render(logs: pd.DataFrame, reference: pd.DataFrame | None, storage: str) -> 
     {_card("Quality signals", "pulse", _quality_chart(logs), hint="monitor.quality()")}
   </div>
   {_drift_panel(logs, reference)}
+  {_operations_panel(logs)}
   <div class="mai-grid">
     {_card("Latency", "clock", _latency_chart(logs, summary), hint="Last 50 requests")}
     {_card("Outcome mix", "shield", _mix(logs), hint="All logged requests")}
   </div>
   {_rl(logs)}
-  <p class="mai-footnote">Thresholds come from monitor.py and are placeholders until WP5 calibrates them on validation data.
+  <p class="mai-footnote">Thresholds come from monitor.py: the drift rule is calibrated on validation data (docs/WP5_DRIFT.md), the operational ones are stated assumptions (docs/WP5_OPERATIONS.md).
   Logs: {_e(storage)}.</p>
 </div>"""
 
 
 def _alerts_panel(logs: pd.DataFrame, reference: pd.DataFrame | None) -> str:
     fired = monitor.alerts(logs, reference)
-    window = min(len(logs), monitor.WINDOW)
+    window = min(len(monitor.real_traffic(logs)), monitor.WINDOW)  # same requests the drift rule uses
     rows = [("high", "Alert", _clean(m)) for m in fired]
     if reference is None:
         rows.append(("medium", "Inactive", "Drift monitoring has no reference set yet (run `main.py reference`, owned by WP5)."))
@@ -175,7 +176,10 @@ def _alerts_panel(logs: pd.DataFrame, reference: pd.DataFrame | None) -> str:
                     f'<span class="mai-badge mai-badge--{tone[s]}">{_e(label)}</span><span>{_e(text).replace("`", "")}</span></li>'
                     for s, label, text in rows)
     rules = (f'Drift: PSI &gt; max({monitor.PSI_ALERT}, {monitor.NOISE_MULTIPLE} × chance level) over the last {monitor.WINDOW} requests · '
-             f'Feedback: more than {monitor.THUMBS_DOWN_ALERT:.0%} negative among at least {monitor.MIN_WINDOW} rated')
+             f'Feedback: more than {monitor.THUMBS_DOWN_ALERT:.0%} negative among at least {monitor.MIN_WINDOW} rated · '
+             f'Review: more than {monitor.REVIEW_ALERT:.0%} of the last {monitor.WINDOW} sent to human review (at least {monitor.MIN_WINDOW} requests) · '
+             f'Quota: more than {monitor.BUDGET_ALERT:.0%} of the daily Gemini budget · '
+             f'Degraded: more than {monitor.DEGRADED_ALERT:.0%} of the last {monitor.DEGRADED_WINDOW} Gemini requests (at least {monitor.MIN_DEGRADED})')
     return _card("Alerts", "bell", f'<ul class="mai-alerts">{items}</ul><p class="mai-footnote">Rules: {rules}.</p>',
                  hint=f"{len(fired)} active")
 
@@ -204,6 +208,7 @@ def _quality_chart(logs: pd.DataFrame) -> str:
 
 
 def _drift_panel(logs: pd.DataFrame, reference: pd.DataFrame | None) -> str:
+    logs = monitor.real_traffic(logs)  # drift is measured on real traffic only, like the alert
     window = min(len(logs), monitor.WINDOW)
     if reference is None:
         body = _empty("drift", "No reference set yet", "Drift is measured against a reference set of normal inputs. "
@@ -225,6 +230,19 @@ def _drift_panel(logs: pd.DataFrame, reference: pd.DataFrame | None) -> str:
         body = (f'<div class="mai-psis">{rows}</div><ul class="mai-legend"><li><span style="background:#007C9E"></span>PSI, last {window} requests</li>'
                 f'<li><span class="mai-legend__line"></span>Alert threshold (noise-adjusted)</li><li><span style="background:#C62828"></span>Above threshold</li></ul>')
     return _card("Data drift · PSI per feature", "drift", body, hint=f"Window {window} of {monitor.WINDOW}")
+
+
+def _operations_panel(logs: pd.DataFrame) -> str:
+    ops = monitor.operations(logs)
+    rows = "".join(f'<tr><th scope="row">{_e(r.metric)}</th><td class="mai-num">{_e(r.value)}</td></tr>' for r in ops.itertuples())
+    counts = monitor.quality_counts(logs)
+    total = int(counts["requests"].sum()) if not counts.empty else 0
+    rated = int(counts["rated"].sum()) if not counts.empty else 0
+    down = int(counts["thumbs down"].sum()) if not counts.empty else 0
+    note = (f'<p class="mai-footnote">Real traffic: {total} requests, {rated} rated, {down} negative. Stub and test requests '
+            f'are excluded, except from the quota line: tests spend the same Gemini quota.</p>')
+    body = f'<table class="mai-table"><caption class="mai-sr">Operations</caption><tbody>{rows}</tbody></table>{note}'
+    return _card("Operations", "coins", body, hint="Real traffic, monitor.operations()")
 
 
 def _latency_chart(logs: pd.DataFrame, summary: dict) -> str:
